@@ -269,6 +269,12 @@ The %sitename% Team',
             #poststuff{
                padding-top: 50px;
             }
+            #option_panel_general_settings_optiontable ul {
+               padding-left: 3em;
+            }
+            #option_panel_general_settings_optiontable ul li {
+               list-style: initial;
+            }
          </style>
          <script type="text/javascript">
             //<![CDATA[
@@ -306,13 +312,14 @@ The %sitename% Team',
   public function option_panel_general_settings() {
     $aOptions = $this->options;
 ?>
-    <table class="optiontable form-table">
+    <table class="optiontable form-table" id="option_panel_general_settings_optiontable">
         <tr valign="top">
             <th scope="row"><?php _e('Import guest posters as users', 'fv_bbpress_tweaks'); ?> </th>
             <td><fieldset><legend class="screen-reader-text"><span><?php _e('Import guest posters as users', 'fv_bbpress_tweaks'); ?></span></legend>
             <input id="participant_importing" type="checkbox" name="participant_importing" value="1"
                 <?php if( isset($aOptions['participant_importing']) && $aOptions['participant_importing'] ) echo 'checked="checked"'; ?> />
-            <label for="participant_importing"><span><?php _e('When a forum guest post (topic/reply) is made (also works if the forum topics/replies are not moderated, so make sure you use FV Antispam or Akismet or Cleantalk!) it checks if the email address is registered and if not, it creates a user account automatically. If such account exists, the reply/topic is linked to that account.', 'fv_bbpress_tweaks'); ?></span></label><br />
+            <label for="participant_importing"><span><?php _e('When a forum guest post (topic/reply) is made (also works if the forum topics/replies are not moderated, so make sure you use FV Antispam or Akismet or Cleantalk!) it checks if the email address is registered and if not, it creates a user account automatically. If such account exists, the reply/topic is linked to that account.<br /><em>"Anonymous posting" in bbPress must be enabled for this to work</em> - without it, no guest posts are made and thus none of the settings below will be applied.', 'fv_bbpress_tweaks'); ?></span></label>
+            <p><?php _e('Note that if you leave this off, the plugin still does the following (so leave the plugin on):', 'fv_bbpress_tweaks'); ?></p><ul><li><?php _e('it <em>adjusts the URL structure</em> to <code>/{forum base}/{forum slug}/{topic slug}</code>.', 'fv_bbpress_tweaks'); ?></li></ul>
             </td>
         </tr>
         <tr valign="top">
