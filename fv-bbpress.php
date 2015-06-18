@@ -13,6 +13,7 @@ NOTE:
 
 TODO:
 - cookies on WPE don't work so bbpressmoderation causes new poster to get 404 when posting a topic because of custom URLs
+- on Patently-O, there is something with the rewrites for jobs..
 
 UM issues/tasks:
 + approve UM membership to new forum users
@@ -382,12 +383,14 @@ The %sitename% Team',
                      $aRoles[$objRole->post_name] = $objRole->post_title;
                   }
                }
-               foreach( $aRoles as $strRoleName => $strRoleTitle ) {
-                  $strSelected = '';
-                  if( isset($aOptions['um_default_role']) && $aOptions['um_default_role'] == $strRoleName ) {
-                     $strSelected = ' selected="selected"';
+               if( !empty( $aRoles ) ) {
+                  foreach( $aRoles as $strRoleName => $strRoleTitle ) {
+                     $strSelected = '';
+                     if( isset($aOptions['um_default_role']) && $aOptions['um_default_role'] == $strRoleName ) {
+                        $strSelected = ' selected="selected"';
+                     }
+                     echo '<option value="'.$strRoleName.'"'.$strSelected.'>'.$strRoleTitle.'</option>'."\n";
                   }
-                  echo '<option value="'.$strRoleName.'"'.$strSelected.'>'.$strRoleTitle.'</option>'."\n";
                }
 ?>
             <label for="um_support"><span><?php /*_e('Check this if Ultimate Member plugin is present on your site', 'fv_bbpress_tweaks');*/ ?></span></label><br />
@@ -765,7 +768,7 @@ $aData:
 
       $aForums = $this->forums;
       if( !$aForums ) {
-      return $aRules;
+         return $aRules;
       }
 
       $aNewRules = array();
