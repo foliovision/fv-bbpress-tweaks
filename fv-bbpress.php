@@ -678,6 +678,8 @@ $aData:
       global $wpdb;
 
       foreach( array( '_bbp_anonymous_name', '_bbp_anonymous_email', '_bbp_anonymous_website' ) as $strMetaKey ) {
+         $strData = get_post_meta( $iPostIDtoFix, $strMetaKey, true );
+         add_post_meta( $iPostIDtoFix, '_fv'.$strMetaKey, $strData, true ); //because of moderation
          delete_post_meta( $iPostIDtoFix, $strMetaKey );
       }
       $aDataToUpdate = array(
@@ -800,7 +802,7 @@ $aData:
 
       $aForums = $this->forums;
       if( !$aForums ) {
-      return $aRules;
+         return $aRules;
       }
 
       //$aRules["forums/topic/([^/]+)/edit/?$"] = 'index.php?' . bbp_get_topic_post_type()  . '=$matches[1]&' . bbp_get_edit_rewrite_id() . '=1';
