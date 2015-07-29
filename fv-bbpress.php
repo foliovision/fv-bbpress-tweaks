@@ -741,32 +741,47 @@ $aData:
 
 
 
+   function get_link_recursively($post,$link=''){
+      if($post->post_parent==0){
+         return $post->post_name.'/'.$link;
+      }else{
+         $link = $post->post_name.'/'.$link;
+         return $this->get_link_recursively($this->get_post_from_forums($post),$link);
+      }
+   }
+
+
+
+
+   function get_post_from_forums($post){
+      if($this->forums){
+         foreach( $this->forums AS $objForum ) {
+            if( $objForum->ID == $post->post_parent ) {
+               return $objForum;
+            }
+         }
+      }
+      return get_post($post->post_parent);
+   }
+
+
+
+
    public function forum_post_type_link($link) {
       $args = func_get_args();
       $post = $args[1];
+      
       if( is_object($post) && $post->post_type == 'forum' && $post->post_status == 'publish' ) {
-         $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$post->post_name) );
-      } elseif( is_object($post) && $post->post_type == 'topic' && in_array( $post->post_status, array( 'publish', 'pending' ) ) ) {
-         $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$post->post_name) );
-         $link = wp_cache_get( 'fv_bbpress_topic_link-'.$post->ID );
-         if( $link == false) {
-           if( $this->forums ) {
-             foreach( $this->forums AS $objForum ) {
-               if( $objForum->ID == $post->post_parent ) {
-                 $sForum = $objForum->post_name;
-               }
-             }
-           }
-           if( $sForum ) {
-             $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$sForum.'/'.$post->post_name) );
-           }
-
-           wp_cache_set( 'fv_bbpress_topic_link-'.$post->ID, $link, 'fv_bbpress' );
-         }
-
-      } elseif( is_object($post) && $post->post_type == 'reply' && in_array( $post->post_status, array( 'publish', 'pending' ) ) ) {
-         $link = user_trailingslashit( home_url(bbp_get_reply_slug().'/'.$post->post_name) ); //fvKajo 20150612
+         $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post)) );
+         
+      }elseif( is_object($post) && $post->post_type == 'topic' && in_array( $post->post_status, array( 'publish', 'pending' ) ) ) {
+         $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post)) );
+         wp_cache_set( 'fv_bbpress_topic_link-'.$post->ID, $link, 'fv_bbpress' );
+         
+      }elseif( is_object($post) && $post->post_type == 'reply' && in_array( $post->post_status, array( 'publish', 'pending' ) ) ) {
+         $link = user_trailingslashit( home_url(bbp_get_reply_slug().'/'.$this->get_link_recursively($post) )); //fvKajo 20150612
       }
+      
       return $link;
    }
 
