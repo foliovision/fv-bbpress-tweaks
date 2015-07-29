@@ -173,9 +173,9 @@ The %sitename% Team',
 /* NOTE: added this:
             add_filter( 'cptp_excluded_post_types', function($aExcludedPostTypes) { return array('forum','topic','reply'); } );
          into functions.php and changed the code in plugins/custom-post-type-permalinks/CPTP/Util.php -> get_post_types()*/
+      add_filter( 'topic_rewrite_rules', array( $this, 'topic_rewrite_rules' ), 100000 ); //fvKajo 20150612
       add_filter( 'forum_rewrite_rules', array( $this, 'forum_rewrite_rules' ), 100000 ); //fvKajo 20150612
       add_filter( 'post_type_link', array( $this, 'forum_post_type_link' ), 100000, 4); //fvKajo 20150612
-      add_filter( 'topic_rewrite_rules', array( $this, 'topic_rewrite_rules' ), 100000 ); //fvKajo 20150612
 
       if( $this->options['participant_importing'] ) {
          add_filter('bbp_new_topic_pre_insert', array($this, 'pre_insert'), 1);
@@ -776,10 +776,11 @@ $aData:
          
       }elseif( is_object($post) && $post->post_type == 'topic' && in_array( $post->post_status, array( 'publish', 'pending' ) ) ) {
          $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post)) );
-         wp_cache_set( 'fv_bbpress_topic_link-'.$post->ID, $link, 'fv_bbpress' );
+         //wp_cache_set( 'fv_bbpress_topic_link-'.$post->ID, $link, 'fv_bbpress' );
          
       }elseif( is_object($post) && $post->post_type == 'reply' && in_array( $post->post_status, array( 'publish', 'pending' ) ) ) {
-         $link = user_trailingslashit( home_url(bbp_get_reply_slug().'/'.$this->get_link_recursively($post) )); //fvKajo 20150612
+         $link = user_trailingslashit( home_url(bbp_get_reply_slug().'/'.$this->get_link_recursively($post) )); // todo : check links to replies
+         
       }
       
       return $link;
@@ -797,17 +798,36 @@ $aData:
 
       $aNewRules = array();
       foreach( $aForums AS $objForum ) {
-      foreach( $aRules AS $k => $v ) {
-        if( stripos($k, '/attachment/') !== false ) continue;
-
-        $k = str_replace( '/forum/(.+?)', '/('.$objForum->post_name.')', $k );
-        $k = str_replace( '/forum)/(.+?)', ')/('.$objForum->post_name.')', $k ); //fvKajo 20150612
-        $aNewRules[$k] = $v;
+         foreach( $aRules AS $k => $v ) {
+           if( stripos($k, '/attachment/') !== false ) continue;
+           
+           $link = rtrim($this->get_link_recursively($objForum),"/");           
+           $k = str_replace( '/forum/(.+?)', '/('.$link.')', $k );
+           $k = str_replace( '/forum)/(.+?)', ')/('.$link.')', $k ); //fvKajo 20150612
+           $aNewRules[$k] = $v;
+         }
+   
       }
-
-      }
-
+      
       return $aNewRules;
+   }
+
+
+
+
+   public function get_forums_descending(){
+      $aParents = array();
+      $aChilds = array();
+      
+      foreach( $this->forums AS $objForum ) {
+         if( $objForum->post_parent != 0 ) {
+            array_push($aChilds,$objForum);
+         }else{
+            array_push($aParents,$objForum);
+         }
+      }
+      
+      return array_merge($aChilds,$aParents);
    }
 
 
@@ -815,27 +835,29 @@ $aData:
 
    public function topic_rewrite_rules( $aRules ) {
 
-      $aForums = $this->forums;
-      if( !$aForums ) {
+      if( !$this->forums ) {
          return $aRules;
       }
 
       //$aRules["forums/topic/([^/]+)/edit/?$"] = 'index.php?' . bbp_get_topic_post_type()  . '=$matches[1]&' . bbp_get_edit_rewrite_id() . '=1';
-
+      $aForums = $this->get_forums_descending();
       $aNewRules = array();
       foreach( $aForums AS $objForum ) {
-      foreach( $aRules AS $k => $v ) {
-        $k = str_replace( '/topic/', '/'.$objForum->post_name.'/', $k );
-        $k = str_replace( '/topic)/', ')/'.$objForum->post_name.'/', $k ); //fvKajo 20150612
-        $aNewRules[$k] = $v;
+         foreach( $aRules AS $k => $v ) {
+           
+           $link = $this->get_link_recursively($objForum);  
+           $k = str_replace( '/topic/', '/'.$link, $k );
+           $k = str_replace( '/topic)/', ')/'.$link, $k ); //fvKajo 20150612
+           $aNewRules[$k] = $v;
+   
+           if( stripos($k, '/attachment/') === false && stripos($k, '([^/]+)/trackback/?$') !== false ) { //  todo: find a better way of adding this rule!
+             $aNewRules["forums/".$link."([^/]+)/edit/?$"] = 'index.php?' . bbp_get_topic_post_type()  . '=$matches[1]&' . bbp_get_edit_rewrite_id() . '=1';
+           }
+           
+         }
 
-        if( stripos($k, '/attachment/') === false && stripos($k, '([^/]+)/trackback/?$') !== false ) { //  todo: find a better way of adding this rule!
-          $aNewRules["forums/".$objForum->post_name."/([^/]+)/edit/?$"] = 'index.php?' . bbp_get_topic_post_type()  . '=$matches[1]&' . bbp_get_edit_rewrite_id() . '=1';
-        }
       }
-
-      }
-
+      
       return $aNewRules;
    }
 
