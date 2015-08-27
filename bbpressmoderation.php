@@ -1,12 +1,5 @@
 <?php
 /*
-Plugin Name: bbPress Moderation
-Description: Moderate bbPress topics and replies
-Author: Ian Stanley
-Version: 1.8.3
-Author URI: http://codeincubator.co.uk
-
-
  Copyright:       Ian Stanley, 2013- (email:iandstanley@gmail.com)
  Maintainer:      Ian Stanley, 2013-  (email iandstanley@gmail.com)
  Original Design by Ian Haycox, 2011-2013 (email : ian.haycox@gmail.com)
@@ -75,7 +68,7 @@ class bbPressModeration {
          register_deactivation_hook( __FILE__, array( &$this, 'deactivate' ) );
       
          // Register an uninstall hook to automatically remove options
-         register_uninstall_hook( __FILE__, array( 'bbPressModeration', 'deinstall' ) );
+         // register_uninstall_hook( __FILE__, array( 'bbPressModeration', 'deinstall' ) );
          
          add_action( 'admin_init', array( $this, 'admin_init' ) );
          add_action( 'admin_menu', array( $this, 'admin_menu' ) );
@@ -112,6 +105,8 @@ class bbPressModeration {
       add_option(self::TD . 'notify', 1);
       add_option(self::TD . 'always_approve_topics', 1);
       add_option(self::TD . 'always_approve_replies', 1);
+      add_option(self::TD . 'always_approve_topics_registered', 1);
+      add_option(self::TD . 'always_approve_replies_registered', 1);
       add_option(self::TD . 'previously_approved', 1);
       add_option(self::TD . 'put_in_front_end_moderation_links', 1);
       
@@ -133,6 +128,14 @@ class bbPressModeration {
       return false;
     }
   }
+  
+  function fv_mycakeschool_get_ids(){
+      if( is_user_logged_in() ){
+        global $wpdb;
+        return $wpdb->get_col( "SELECT ID FROM $wpdb->posts WHERE post_author = '".get_current_user_id()."' AND post_type IN ( 'topic', 'reply' )" );        
+      }
+      return false;
+  }
    
    /**
     * Deactivate
@@ -145,7 +148,7 @@ class bbPressModeration {
    /**
     * Tidy up deleted plugin by removing options
     */
-   static function deinstall() {
+   /*static function deinstall() {
       delete_option(self::TD . 'always_display');
       delete_option(self::TD . 'notify');
       delete_option(self::TD . 'always_approve_topics');
@@ -154,7 +157,7 @@ class bbPressModeration {
       delete_option(self::TD . 'put_in_front_end_moderation_links');
       
       return true;
-   }
+   }*/
   
   
   function moderated_posts_allow_reply( $can ) {
@@ -187,7 +190,7 @@ class bbPressModeration {
 
     if( !isset($query->query['post_type']) || ( $query->query['post_type'] != 'topic' && ( is_array($query->query['post_type']) && implode('',$query->query['post_type']) != 'topicreply' ) ) ) return;
     
-    if( $this->cookie ) {
+    if( $this->cookie || is_user_logged_in() ) {
       $query->query_vars['post_status'] = 'publish,pending';
 //      if( $aIds = $this->cookie_get_ids() ) {
 //         
@@ -281,7 +284,9 @@ class bbPressModeration {
                   $data['post_status'] = 'pending';
                }
             } else {
-               $data['post_status'] = 'pending';
+               if ( ( 'topic' == $data['post_type'] && get_option(self::TD . 'always_approve_topics_registered') ) || ( 'reply' == $data['post_type'] && get_option(self::TD . 'always_approve_replies_registered') ) ) {
+                  $data['post_status'] = 'pending';
+               }
             }     
       }
       return $data;
@@ -415,11 +420,12 @@ class bbPressModeration {
 
       $post = get_post( $post_id );
       $aIds = $this->cookie_get_ids();
+      $aIds_registered = $this->fv_mycakeschool_get_ids();
       if ($post && $post->post_status == 'pending') {
          if (current_user_can('moderate')) {
             // Admin can see body
             return __('(Awaiting moderation)', self::TD) . '<br />' . $content;
-         } elseif ( $aIds && ( in_array( $post_id, $aIds ) || in_array( $post->post_parent, $aIds ) ) ) {
+         } elseif ( ( $aIds && ( in_array( $post_id, $aIds ) || in_array( $post->post_parent, $aIds ) ) ) || ( $aIds_registered && ( in_array( $post_id, $aIds_registered ) || in_array( $post->post_parent, $aIds_registered ) ) ) ) {
             // See the content if it belongs to you
             return __('(Awaiting moderation)', self::TD) . '<br />' . $content;
          } else {
@@ -1316,6 +1322,8 @@ class bbPressModeration {
       register_setting( self::TD.'option-group', self::TD.'notify');
       register_setting( self::TD.'option-group', self::TD.'always_approve_topics');
       register_setting( self::TD.'option-group', self::TD.'always_approve_replies');
+      register_setting( self::TD.'option-group', self::TD.'always_approve_topics_registered');
+      register_setting( self::TD.'option-group', self::TD.'always_approve_replies_registered');
       register_setting( self::TD.'option-group', self::TD.'previously_approved');
       register_setting( self::TD.'option-group', self::TD.'put_in_front_end_moderation_links');
       
@@ -1353,16 +1361,8 @@ class bbPressModeration {
          <label for="<?php echo self::TD; ?>notify"><?php _e('A topic or reply is held for moderation', self::TD); ?></label>
       </td>
       </tr>
-      
-      <tr valign="top">
-      <th scope="row"><?php _e('Do not moderate', self::TD); ?></th>
-      <td>
-         <input type="checkbox" id="<?php echo self::TD; ?>previously_approved" name="<?php echo self::TD; ?>previously_approved" value="1" <?php echo (get_option(self::TD.'previously_approved', '') ? ' checked="checked" ' : ''); ?> />
-         <label for="<?php echo self::TD; ?>previously_approved"><?php _e('A topic or reply by a previously approved author', self::TD); ?></label>
-      </td>
-      </tr>
 
-      <tr valign="top">
+   <tr valign="top">
       <th scope="row"><?php _e('Anonymous topics and replies', self::TD); ?></th>
       <td>
          <input type="checkbox" id="<?php echo self::TD; ?>always_approve_topics" name="<?php echo self::TD; ?>always_approve_topics" value="1" <?php echo (get_option(self::TD.'always_approve_topics', '') ? ' checked="checked" ' : ''); ?> />
@@ -1377,6 +1377,32 @@ class bbPressModeration {
          <label for="<?php echo self::TD; ?>always_approve_replies"><?php _e('Always moderate replies', self::TD); ?></label>
       </td>
    </tr>
+   
+   <tr valign="top">
+      <th scope="row"><?php _e('Registered user topics and replies', self::TD); ?></th>
+      <td>
+         <input type="checkbox" id="<?php echo self::TD; ?>always_approve_topics_registered" name="<?php echo self::TD; ?>always_approve_topics_registered" value="1" <?php echo (get_option(self::TD.'always_approve_topics_registered', '') ? ' checked="checked" ' : ''); ?> />
+         <label for="<?php echo self::TD; ?>always_approve_topics_registered"><?php _e('Always moderate topics', self::TD); ?></label>
+      </td>
+   </tr>
+   
+   
+   <tr>
+            <th scope="row"><?php _e('', self::TD); ?></th>
+      <td>
+         <input type="checkbox" id="<?php echo self::TD; ?>always_approve_replies_registered" name="<?php echo self::TD; ?>always_approve_replies_registered" value="1" <?php echo (get_option(self::TD.'always_approve_replies_registered', '') ? ' checked="checked" ' : ''); ?> />
+         <label for="<?php echo self::TD; ?>always_approve_replies_registered"><?php _e('Always moderate replies', self::TD); ?></label>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <th scope="row"><?php _e('Do not moderate', self::TD); ?></th>
+      <td>
+         <input type="checkbox" id="<?php echo self::TD; ?>previously_approved" name="<?php echo self::TD; ?>previously_approved" value="1" <?php echo (get_option(self::TD.'previously_approved', '') ? ' checked="checked" ' : ''); ?> />
+         <label for="<?php echo self::TD; ?>previously_approved"><?php _e('A topic or reply by a previously approved author', self::TD); ?></label>
+      </td>
+      </tr>
+   
    <tr>
       <th scope="row"><?php _e('Front end moderation', self::TD); ?></th>
       <td>
