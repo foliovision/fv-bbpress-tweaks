@@ -177,9 +177,9 @@ class bbPressModeration {
   
   function moderated_posts_for_poster( $query ) { //  users with cookie get even the pending posts
     
-    if( !bbp_is_forum_archive() && !bbp_is_topic_archive() && !bbp_is_single_forum() && !bbp_is_single_topic() && !bbp_is_single_reply() ) {
+    /*if( !bbp_is_forum_archive() && !bbp_is_topic_archive() && !bbp_is_single_forum() && !bbp_is_single_topic() && !bbp_is_single_reply() ) {
       return;
-    }
+    }*/
     
     if( isset($query->query['post_type']) && $query->query['post_type'] == 'reply' && isset($query->query['edit']) && $query->query['edit'] = 1 ) {
       $query->query_vars['post_status'] = 'publish,pending';
@@ -799,6 +799,7 @@ class bbPressModeration {
          $message = array();
          switch ( $action ) {
             case 'bbp_approve_reply' :
+               die('tu sa to robi?');
                check_ajax_referer( 'approve-reply_' . $reply_id );
 
                $success  = $this->bbp_approve_reply( $reply_id );
@@ -926,6 +927,7 @@ class bbPressModeration {
       $success   = false;                      // Flag
       $post_data = array( 'ID' => $reply_id ); // Prelim array
       $redirect  = '';                         // Empty redirect URL
+      
    
       // Make sure reply exists
       $reply = bbp_get_reply( $reply_id );
@@ -944,6 +946,7 @@ class bbPressModeration {
       // What action are we trying to perform?
       switch ( $action ) {
          case 'bbp_approve_reply':
+            $this->fv_mycakeschool_sent_email_approve($reply_id);
             check_ajax_referer( 'approve-reply_' . $reply_id );
    
             $success  = $this->bbp_approve_reply( $reply_id );
@@ -977,6 +980,8 @@ class bbPressModeration {
          if ( !empty( $view_all ) )
             $reply_url = bbp_add_view_all( $reply_url, true );
    
+         // Sent email to user that his/her reply was approved
+         
          // Redirect back to reply
          wp_safe_redirect( $reply_url );
    
@@ -990,6 +995,70 @@ class bbPressModeration {
          }
          bbp_add_error( 'bbp_approve_reply', $failure );
       }
+   }
+   
+   function fv_mycakeschool_sent_email_approve($reply_id){
+        
+        /** Validation ************************************************************/
+
+	$topic_id = bbp_get_topic_id( $topic_id );
+	$forum_id = bbp_get_forum_id( $forum_id );
+
+	// Poster name
+	$reply_author_name = bbp_get_reply_author_display_name( $reply_id );
+        
+        // Poster author email
+        $reply_author_email = bbp_get_reply_author_email($reply_id);
+
+	/** Mail ******************************************************************/
+
+	// Remove filters from reply content and topic title to prevent content
+	// from being encoded with HTML entities, wrapped in paragraph tags, etc...
+	remove_all_filters( 'bbp_get_reply_content' );
+	remove_all_filters( 'bbp_get_topic_title'   );
+
+	// Strip tags from text and setup mail data
+	$topic_title   = strip_tags( bbp_get_topic_title( $topic_id ) );
+	$reply_content = strip_tags( bbp_get_reply_content( $reply_id ) );
+	$reply_url     = bbp_get_reply_url( $reply_id );
+	$blog_name     = wp_specialchars_decode( get_option( 'blogname' ), ENT_QUOTES );
+
+	// For plugins to filter messages per reply/topic/user
+	$message = sprintf( __( '%1$s :
+
+%2$s
+
+Post Link: %3$s
+
+-----------
+
+Your reply was approved by admin.', 'bbpress' ),
+
+		$reply_author_name,
+		$reply_content,
+		$reply_url
+	);
+
+
+	// For plugins to filter titles per reply/topic/user
+	$subject = 'Approve your reply';
+
+	// Get the noreply@ address
+	$no_reply   = bbp_get_do_not_reply_address();
+
+	// Setup "From" email address
+	$from_email = apply_filters( 'bbp_subscription_from_email', $no_reply );
+
+	// Setup the From header
+	$header = array( 'From: ' . get_bloginfo( 'name' ) . ' <' . $from_email . '>' );
+        
+        $header[] = 'Bcc: ' . $reply_author_email;
+	
+        //var_dump($reply_author_email, $subject, $message, $header);
+        //die();
+
+	// Send notification email
+	wp_mail( $reply_author_email, $subject, $message, $header );
    }
    
    function bbp_approve_topic( $topic_id ) {
