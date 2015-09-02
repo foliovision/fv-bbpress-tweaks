@@ -177,6 +177,10 @@ class bbPressModeration {
   
   function moderated_posts_for_poster( $query ) { //  users with cookie get even the pending posts
     
+    if( !bbp_is_forum_archive() && !bbp_is_topic_archive() && !bbp_is_single_forum() && !bbp_is_single_topic() && !bbp_is_single_reply() ) {
+      return;
+    }
+    
     if( isset($query->query['post_type']) && $query->query['post_type'] == 'reply' && isset($query->query['edit']) && $query->query['edit'] = 1 ) {
       $query->query_vars['post_status'] = 'publish,pending';
       $query->query['p'] = $query->query['name'];
