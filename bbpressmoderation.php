@@ -177,9 +177,10 @@ class bbPressModeration {
   
   function moderated_posts_for_poster( $query ) { //  users with cookie get even the pending posts
     
-    /*if( !bbp_is_forum_archive() && !bbp_is_topic_archive() && !bbp_is_single_forum() && !bbp_is_single_topic() && !bbp_is_single_reply() ) {
-      return;
-    }*/
+    if( (isset($query->query['post_type']) && $query->query['post_type'] == 'reply') && ( $this->cookie || is_user_logged_in() )  ) {
+      $query->query_vars['post_status'] = 'publish,pending';
+    }
+    
     
     if( isset($query->query['post_type']) && $query->query['post_type'] == 'reply' && isset($query->query['edit']) && $query->query['edit'] = 1 ) {
       $query->query_vars['post_status'] = 'publish,pending';
@@ -193,13 +194,7 @@ class bbPressModeration {
     }
 
     if( !isset($query->query['post_type']) || ( $query->query['post_type'] != 'topic' && ( is_array($query->query['post_type']) && implode('',$query->query['post_type']) != 'topicreply' ) ) ) return;
-    
-    if( $this->cookie || is_user_logged_in() ) {
-      $query->query_vars['post_status'] = 'publish,pending';
-//      if( $aIds = $this->cookie_get_ids() ) {
-//         
-//      }
-    }
+   
     
     //var_dump($query);
   }
