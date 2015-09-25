@@ -85,6 +85,21 @@ class bbPressModeration {
          add_action( 'admin_notices',  array( $this, 'handle_row_actions_approve_reply_notice' ) );
 
       }
+      //  without this the intro reply would not show up. strange
+      add_filter('bbp_show_lead_topic','__return_true');
+      
+      if(get_option(self::TD.'limit_guest_access')){
+         // If FV bbPress Settings->Limit guest access is checked
+         
+         add_filter('bbp_get_reply_content',array( $this,'fv_bbpress_tweaks_post_text') );
+         add_filter('bbp_get_topic_content',array( $this,'fv_bbpress_tweaks_post_text') );
+         add_filter( 'get_avatar',array( $this, 'fv_bbpress_tweaks_get_avatar' ),10,6 );         
+         add_filter('bbp_get_reply_author_link',array( $this,'fv_bbpress_tweaks_forum_user_info_remove') );
+         add_filter('bbp_get_topic_author_link',array( $this,'fv_bbpress_tweaks_forum_user_info_remove') );         
+         add_filter('bbp_get_topic_author_avatar',array( $this,'epmty_avatar') );
+         add_action( 'bbp_theme_before_topic_started_by',array( $this, 'fv_bbpress_tweaks_forum_remove_started_by_before') );
+         add_action( 'bbp_theme_after_topic_started_by',array( $this, 'fv_bbpress_tweaks_forum_remove_started_by_after') );
+      }
 
     add_action( 'init', array( $this, 'cookie_check' ) );
 
@@ -100,7 +115,8 @@ class bbPressModeration {
     * @return boolean
     */
    function activate() {
-      // Notify admin 
+      // Notify admin
+      add_option(self::TD . 'limit_guest_access', 0);
       add_option(self::TD . 'always_display', 1);
       add_option(self::TD . 'notify', 1);
       add_option(self::TD . 'always_approve_topics', 1);
@@ -1386,6 +1402,7 @@ Your reply was approved by admin.', 'bbpress' ),
     * Register our options
     */
    function admin_init() {
+      register_setting( self::TD.'option-group', self::TD.'limit_guest_access');
       register_setting( self::TD.'option-group', self::TD.'always_display');
       register_setting( self::TD.'option-group', self::TD.'notify');
       register_setting( self::TD.'option-group', self::TD.'always_approve_topics');
@@ -1406,13 +1423,33 @@ Your reply was approved by admin.', 'bbpress' ),
       <div class="wrap">
       
       <div id="icon-options-general" class="icon32"><br/></div>
-      <h2><?php _e('bbPress Moderation settings', self::TD); ?></h2>
+      <h2><?php _e('FV bbPress Settings', self::TD); ?></h2>
       
       <form method="post" action="options.php">
       
       <?php settings_fields( self::TD.'option-group' );?>
       
       <table class="form-table">
+      
+      <tr valign="top">
+         <td>
+            <h3><?php _e('Privacy settings', self::TD); ?></h3>
+         </td>
+      </tr>
+      
+      <tr valign="top">
+      <th scope="row"><?php _e('Limit guest access', self::TD); ?></th>
+      <td>
+         <input type="checkbox" id="<?php echo self::TD; ?>limit_guest_access" name="<?php echo self::TD; ?>limit_guest_access" value="1" <?php echo (get_option(self::TD.'limit_guest_access', '') ? ' checked="checked" ' : ''); ?> />
+         <label for="<?php echo self::TD; ?>limit_guest_access"><?php _e('Limit guest users to first couple of sentences of each forum topic only, hide user names and avatars (Google will index your forums, good for SEO)', self::TD); ?></label>
+      </td>
+      </tr>
+      
+      <tr valign="top">
+         <td>
+            <h3><?php _e('Moderation settings', self::TD); ?></h3>
+         </td>
+      </tr>
          
       <tr valign="top">
       <th scope="row"><?php _e('Display pending posts on forums', self::TD); ?></th>
@@ -1563,6 +1600,87 @@ Your reply was approved by admin.', 'bbpress' ),
             }
          }
       }
+   }
+   
+   /*
+   *  Forum tweaks
+   */
+   
+   //  check if person who browse the forum is logged in.
+   function fv_bbpress_tweaks_membership_user() {
+      if( current_user_can('access_s2member_level1') )  {
+         return true;
+      }
+   }
+
+   // If somebody isn't logged in, he (she) won't see whole reply. 
+   function fv_bbpress_tweaks_post_text($content) {
+      if( !$this->fv_bbpress_tweaks_membership_user() ) {
+         $content = explode( ' ', $content, 12 );
+         unset( $content[11] );
+         $content = implode( ' ', $content ).'&hellip;<br /><br /><em>(message shortened)</em>';
+      }
+      
+      return $content;
+   }
+
+   //  make sure guests don't see person's gravatar
+   //add_filter( 'get_avatar', 'fv_bbpress_tweaks_get_avatar', 10, 6 );
+   function fv_bbpress_tweaks_get_avatar( $avatar ) {
+      if( ( bbp_is_forum_archive() || bbp_is_topic_archive() || bbp_is_single_forum() || bbp_is_single_topic() || bbp_is_single_reply() ) && !$this->fv_bbpress_tweaks_membership_user() ) {
+         $aArgs = func_get_args();
+         
+         // copy from wp-includes/pluggable.php
+         $avatar = sprintf(
+         "<img alt='%s' src='%s' srcset='%s' class='%s' height='%d' width='%d' %s/>",
+         esc_attr( $aArgs[4] ),
+         esc_url( get_option('avatar_default') ),
+         esc_attr( get_option('avatar_default')." 2x" ),
+         esc_attr( join( ' ', array( 'avatar', 'avatar-' . (int) $aArgs[2], 'photo' ) ) ),
+         (int) $aArgs[5]['height'],
+         (int) $aArgs[5]['width'],
+         $args['extra_attr']
+         );
+         
+       }  
+       
+       return $avatar;
+   }
+
+   function fv_bbpress_tweaks_forum_user_info_remove( $sHTML ) {
+      if( !$this->fv_bbpress_tweaks_membership_user() ) {
+         if( !bbp_is_single_topic() ) {
+            return '';
+         }
+    
+    $sHTML = <<<HTML
+    <div class="bbp-author-avatar">
+HTML;
+    $sHTML .= get_avatar( 'defaultavatar@example.com', 80 );
+    $sHTML .= <<<HTML
+    </div><br /><a name="anchor" class="bbp-author-name">*****</a><br /><div class="bbp-author-role"></div>
+HTML;
+      }
+      return $sHTML;
+   }
+
+   function empty_avatar($avatar){
+      if( !$this->fv_bbpress_tweaks_membership_user() ) {
+         return "";
+      }
+      return $avatar;
+   }   
+   
+   function fv_bbpress_tweaks_forum_remove_started_by_before() {
+      if( !$this->fv_bbpress_tweaks_membership_user() ) {
+         ob_start();
+      }
+   }   
+   
+   function fv_bbpress_tweaks_forum_remove_started_by_after() {
+     if( !$this->fv_bbpress_tweaks_membership_user() ) {
+       ob_get_clean();
+     }
    }
 }
 
