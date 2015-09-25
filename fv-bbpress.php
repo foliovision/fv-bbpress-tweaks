@@ -771,7 +771,7 @@ $aData:
       $args = func_get_args();
       $post = $args[1];
       
-      if( is_object($post) && $post->post_type == 'forum' && $post->post_status == 'publish' ) {
+      if( is_object($post) && $post->post_type == 'forum' && in_array( $post->post_status, array( 'publish', 'hidden' ) ) ) {
          $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post)) );
          
       }elseif( is_object($post) && $post->post_type == 'topic' && in_array( $post->post_status, array( 'publish', 'pending' ) ) ) {
@@ -782,7 +782,7 @@ $aData:
          $link = user_trailingslashit( home_url(bbp_get_reply_slug().'/'.$this->get_link_recursively($post) )); // todo : check links to replies
          
       }
-      
+
       return $link;
    }
 
