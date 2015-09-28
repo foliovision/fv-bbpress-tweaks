@@ -54,6 +54,9 @@ class bbPressModeration {
       add_filter( 'bbp_reply_admin_links', array( $this, 'bbp_reply_admin_links' ), 10, 2 );
       add_action( 'bbp_get_request', array( $this, 'bbp_approve_topic_handler' ), 2 );
       add_action( 'bbp_get_request', array( $this, 'bbp_approve_reply_handler' ), 2 );
+      
+      // set checkbox "Notify me of follow-up replies via email" as checked by default
+      add_filter( 'bbp_get_form_topic_subscribed', array( $this, 'fv_bbpress_tweaks_auto_subscribe'), 10, 2 );
 
       add_filter( 'bbp_current_user_can_publish_replies', array( $this, 'can_reply' ) );
       
@@ -1681,6 +1684,14 @@ HTML;
      if( !$this->fv_bbpress_tweaks_membership_user() ) {
        ob_get_clean();
      }
+   }
+   
+   function fv_bbpress_tweaks_auto_subscribe( $checked, $topic_subscribed  ) {
+
+    if( $topic_subscribed == 0 )
+        $topic_subscribed = true;
+
+    return checked( $topic_subscribed, true, false );
    }
 }
 
