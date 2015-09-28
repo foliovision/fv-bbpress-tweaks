@@ -1,12 +1,5 @@
 <?php
 /*
-Plugin Name: bbPress Moderation
-Description: Moderate bbPress topics and replies
-Author: Ian Stanley
-Version: 1.8.3
-Author URI: http://codeincubator.co.uk
-
-
  Copyright:       Ian Stanley, 2013- (email:iandstanley@gmail.com)
  Maintainer:      Ian Stanley, 2013-  (email iandstanley@gmail.com)
  Original Design by Ian Haycox, 2011-2013 (email : ian.haycox@gmail.com)
@@ -61,6 +54,9 @@ class bbPressModeration {
       add_filter( 'bbp_reply_admin_links', array( $this, 'bbp_reply_admin_links' ), 10, 2 );
       add_action( 'bbp_get_request', array( $this, 'bbp_approve_topic_handler' ), 2 );
       add_action( 'bbp_get_request', array( $this, 'bbp_approve_reply_handler' ), 2 );
+      
+      // set checkbox "Notify me of follow-up replies via email" as checked by default
+      add_filter( 'bbp_get_form_topic_subscribed', array( $this, 'fv_bbpress_tweaks_auto_subscribe'), 10, 2 );
 
       add_filter( 'bbp_current_user_can_publish_replies', array( $this, 'can_reply' ) );
       
@@ -75,7 +71,7 @@ class bbPressModeration {
          register_deactivation_hook( __FILE__, array( &$this, 'deactivate' ) );
       
          // Register an uninstall hook to automatically remove options
-         register_uninstall_hook( __FILE__, array( 'bbPressModeration', 'deinstall' ) );
+         // register_uninstall_hook( __FILE__, array( 'bbPressModeration', 'deinstall' ) );
          
          add_action( 'admin_init', array( $this, 'admin_init' ) );
          add_action( 'admin_menu', array( $this, 'admin_menu' ) );
@@ -92,6 +88,21 @@ class bbPressModeration {
          add_action( 'admin_notices',  array( $this, 'handle_row_actions_approve_reply_notice' ) );
 
       }
+      //  without this the intro reply would not show up. strange
+      add_filter('bbp_show_lead_topic','__return_true');
+      
+      if(get_option(self::TD.'limit_guest_access')){
+         // If FV bbPress Settings->Limit guest access is checked
+         
+         add_filter('bbp_get_reply_content',array( $this,'fv_bbpress_tweaks_post_text') );
+         add_filter('bbp_get_topic_content',array( $this,'fv_bbpress_tweaks_post_text') );
+         add_filter( 'get_avatar',array( $this, 'fv_bbpress_tweaks_get_avatar' ),10,6 );         
+         add_filter('bbp_get_reply_author_link',array( $this,'fv_bbpress_tweaks_forum_user_info_remove') );
+         add_filter('bbp_get_topic_author_link',array( $this,'fv_bbpress_tweaks_forum_user_info_remove') );         
+         add_filter('bbp_get_topic_author_avatar',array( $this,'epmty_avatar') );
+         add_action( 'bbp_theme_before_topic_started_by',array( $this, 'fv_bbpress_tweaks_forum_remove_started_by_before') );
+         add_action( 'bbp_theme_after_topic_started_by',array( $this, 'fv_bbpress_tweaks_forum_remove_started_by_after') );
+      }
 
     add_action( 'init', array( $this, 'cookie_check' ) );
 
@@ -107,11 +118,14 @@ class bbPressModeration {
     * @return boolean
     */
    function activate() {
-      // Notify admin 
+      // Notify admin
+      add_option(self::TD . 'limit_guest_access', 0);
       add_option(self::TD . 'always_display', 1);
       add_option(self::TD . 'notify', 1);
       add_option(self::TD . 'always_approve_topics', 1);
       add_option(self::TD . 'always_approve_replies', 1);
+      add_option(self::TD . 'always_approve_topics_registered', 1);
+      add_option(self::TD . 'always_approve_replies_registered', 1);
       add_option(self::TD . 'previously_approved', 1);
       add_option(self::TD . 'put_in_front_end_moderation_links', 1);
       
@@ -133,6 +147,14 @@ class bbPressModeration {
       return false;
     }
   }
+  
+  function fv_bbpress_tweaks_get_ids(){
+      if( is_user_logged_in() ){
+        global $wpdb;
+        return $wpdb->get_col( "SELECT ID FROM $wpdb->posts WHERE post_author = '".get_current_user_id()."' AND post_type IN ( 'topic', 'reply' )" );        
+      }
+      return false;
+  }
    
    /**
     * Deactivate
@@ -145,7 +167,7 @@ class bbPressModeration {
    /**
     * Tidy up deleted plugin by removing options
     */
-   static function deinstall() {
+   /*static function deinstall() {
       delete_option(self::TD . 'always_display');
       delete_option(self::TD . 'notify');
       delete_option(self::TD . 'always_approve_topics');
@@ -154,7 +176,7 @@ class bbPressModeration {
       delete_option(self::TD . 'put_in_front_end_moderation_links');
       
       return true;
-   }
+   }*/
   
   
   function moderated_posts_allow_reply( $can ) {
@@ -174,6 +196,11 @@ class bbPressModeration {
   
   function moderated_posts_for_poster( $query ) { //  users with cookie get even the pending posts
     
+    if( (isset($query->query['post_type']) && $query->query['post_type'] == 'reply') && ( $this->cookie || is_user_logged_in() )  ) {
+      $query->query_vars['post_status'] = 'publish,pending';
+    }
+    
+    
     if( isset($query->query['post_type']) && $query->query['post_type'] == 'reply' && isset($query->query['edit']) && $query->query['edit'] = 1 ) {
       $query->query_vars['post_status'] = 'publish,pending';
       $query->query['p'] = $query->query['name'];
@@ -186,13 +213,7 @@ class bbPressModeration {
     }
 
     if( !isset($query->query['post_type']) || ( $query->query['post_type'] != 'topic' && ( is_array($query->query['post_type']) && implode('',$query->query['post_type']) != 'topicreply' ) ) ) return;
-    
-    if( $this->cookie ) {
-      $query->query_vars['post_status'] = 'publish,pending';
-//      if( $aIds = $this->cookie_get_ids() ) {
-//         
-//      }
-    }
+   
     
     //var_dump($query);
   }
@@ -281,7 +302,9 @@ class bbPressModeration {
                   $data['post_status'] = 'pending';
                }
             } else {
-               $data['post_status'] = 'pending';
+               if ( ( 'topic' == $data['post_type'] && get_option(self::TD . 'always_approve_topics_registered') ) || ( 'reply' == $data['post_type'] && get_option(self::TD . 'always_approve_replies_registered') ) ) {
+                  $data['post_status'] = 'pending';
+               }
             }     
       }
       return $data;
@@ -415,11 +438,12 @@ class bbPressModeration {
 
       $post = get_post( $post_id );
       $aIds = $this->cookie_get_ids();
+      $aIds_registered = $this->fv_bbpress_tweaks_get_ids();
       if ($post && $post->post_status == 'pending') {
          if (current_user_can('moderate')) {
             // Admin can see body
             return __('(Awaiting moderation)', self::TD) . '<br />' . $content;
-         } elseif ( $aIds && ( in_array( $post_id, $aIds ) || in_array( $post->post_parent, $aIds ) ) ) {
+         } elseif ( ( $aIds && ( in_array( $post_id, $aIds ) || in_array( $post->post_parent, $aIds ) ) ) || ( $aIds_registered && ( in_array( $post_id, $aIds_registered ) || in_array( $post->post_parent, $aIds_registered ) ) ) ) {
             // See the content if it belongs to you
             return __('(Awaiting moderation)', self::TD) . '<br />' . $content;
          } else {
@@ -789,6 +813,7 @@ class bbPressModeration {
          $message = array();
          switch ( $action ) {
             case 'bbp_approve_reply' :
+               die('tu sa to robi?');
                check_ajax_referer( 'approve-reply_' . $reply_id );
 
                $success  = $this->bbp_approve_reply( $reply_id );
@@ -916,6 +941,7 @@ class bbPressModeration {
       $success   = false;                      // Flag
       $post_data = array( 'ID' => $reply_id ); // Prelim array
       $redirect  = '';                         // Empty redirect URL
+      
    
       // Make sure reply exists
       $reply = bbp_get_reply( $reply_id );
@@ -934,6 +960,7 @@ class bbPressModeration {
       // What action are we trying to perform?
       switch ( $action ) {
          case 'bbp_approve_reply':
+            $this->fv_bbpress_tweaks_sent_email_approve($reply_id);
             check_ajax_referer( 'approve-reply_' . $reply_id );
    
             $success  = $this->bbp_approve_reply( $reply_id );
@@ -967,6 +994,8 @@ class bbPressModeration {
          if ( !empty( $view_all ) )
             $reply_url = bbp_add_view_all( $reply_url, true );
    
+         // Sent email to user that his/her reply was approved
+         
          // Redirect back to reply
          wp_safe_redirect( $reply_url );
    
@@ -980,6 +1009,70 @@ class bbPressModeration {
          }
          bbp_add_error( 'bbp_approve_reply', $failure );
       }
+   }
+   
+   function fv_bbpress_tweaks_sent_email_approve($reply_id){
+        
+        /** Validation ************************************************************/
+
+	$topic_id = bbp_get_topic_id( $topic_id );
+	$forum_id = bbp_get_forum_id( $forum_id );
+
+	// Poster name
+	$reply_author_name = bbp_get_reply_author_display_name( $reply_id );
+        
+        // Poster author email
+        $reply_author_email = bbp_get_reply_author_email($reply_id);
+
+	/** Mail ******************************************************************/
+
+	// Remove filters from reply content and topic title to prevent content
+	// from being encoded with HTML entities, wrapped in paragraph tags, etc...
+	remove_all_filters( 'bbp_get_reply_content' );
+	remove_all_filters( 'bbp_get_topic_title'   );
+
+	// Strip tags from text and setup mail data
+	$topic_title   = strip_tags( bbp_get_topic_title( $topic_id ) );
+	$reply_content = strip_tags( bbp_get_reply_content( $reply_id ) );
+	$reply_url     = bbp_get_reply_url( $reply_id );
+	$blog_name     = wp_specialchars_decode( get_option( 'blogname' ), ENT_QUOTES );
+
+	// For plugins to filter messages per reply/topic/user
+	$message = sprintf( __( '%1$s :
+
+%2$s
+
+Post Link: %3$s
+
+-----------
+
+Your reply was approved by admin.', 'bbpress' ),
+
+		$reply_author_name,
+		$reply_content,
+		$reply_url
+	);
+
+
+	// For plugins to filter titles per reply/topic/user
+	$subject = 'Approve your reply';
+
+	// Get the noreply@ address
+	$no_reply   = bbp_get_do_not_reply_address();
+
+	// Setup "From" email address
+	$from_email = apply_filters( 'bbp_subscription_from_email', $no_reply );
+
+	// Setup the From header
+	$header = array( 'From: ' . get_bloginfo( 'name' ) . ' <' . $from_email . '>' );
+        
+        $header[] = 'Bcc: ' . $reply_author_email;
+	
+        //var_dump($reply_author_email, $subject, $message, $header);
+        //die();
+
+	// Send notification email
+	wp_mail( $reply_author_email, $subject, $message, $header );
    }
    
    function bbp_approve_topic( $topic_id ) {
@@ -1237,7 +1330,7 @@ class bbPressModeration {
       global $menu;
       global $wpdb;
       
-      add_options_page(__('bbPress Moderation', self::TD), __('bbPress Moderation', self::TD), 
+      add_options_page(__('FV bbPress Tweaks', self::TD), __('FV bbPress Tweaks', self::TD), 
                         'manage_options', self::TD, array($this, 'options'));
       
       /*
@@ -1312,10 +1405,13 @@ class bbPressModeration {
     * Register our options
     */
    function admin_init() {
+      register_setting( self::TD.'option-group', self::TD.'limit_guest_access');
       register_setting( self::TD.'option-group', self::TD.'always_display');
       register_setting( self::TD.'option-group', self::TD.'notify');
       register_setting( self::TD.'option-group', self::TD.'always_approve_topics');
       register_setting( self::TD.'option-group', self::TD.'always_approve_replies');
+      register_setting( self::TD.'option-group', self::TD.'always_approve_topics_registered');
+      register_setting( self::TD.'option-group', self::TD.'always_approve_replies_registered');
       register_setting( self::TD.'option-group', self::TD.'previously_approved');
       register_setting( self::TD.'option-group', self::TD.'put_in_front_end_moderation_links');
       
@@ -1330,13 +1426,33 @@ class bbPressModeration {
       <div class="wrap">
       
       <div id="icon-options-general" class="icon32"><br/></div>
-      <h2><?php _e('bbPress Moderation settings', self::TD); ?></h2>
+      <h2><?php _e('FV bbPress Settings', self::TD); ?></h2>
       
       <form method="post" action="options.php">
       
       <?php settings_fields( self::TD.'option-group' );?>
       
       <table class="form-table">
+      
+      <tr valign="top">
+         <td>
+            <h3><?php _e('Privacy settings', self::TD); ?></h3>
+         </td>
+      </tr>
+      
+      <tr valign="top">
+      <th scope="row"><?php _e('Limit guest access', self::TD); ?></th>
+      <td>
+         <input type="checkbox" id="<?php echo self::TD; ?>limit_guest_access" name="<?php echo self::TD; ?>limit_guest_access" value="1" <?php echo (get_option(self::TD.'limit_guest_access', '') ? ' checked="checked" ' : ''); ?> />
+         <label for="<?php echo self::TD; ?>limit_guest_access"><?php _e('Limit guest users to first couple of sentences of each forum topic only, hide user names and avatars (Google will index your forums, good for SEO)', self::TD); ?></label>
+      </td>
+      </tr>
+      
+      <tr valign="top">
+         <td>
+            <h3><?php _e('Moderation settings', self::TD); ?></h3>
+         </td>
+      </tr>
          
       <tr valign="top">
       <th scope="row"><?php _e('Display pending posts on forums', self::TD); ?></th>
@@ -1353,16 +1469,8 @@ class bbPressModeration {
          <label for="<?php echo self::TD; ?>notify"><?php _e('A topic or reply is held for moderation', self::TD); ?></label>
       </td>
       </tr>
-      
-      <tr valign="top">
-      <th scope="row"><?php _e('Do not moderate', self::TD); ?></th>
-      <td>
-         <input type="checkbox" id="<?php echo self::TD; ?>previously_approved" name="<?php echo self::TD; ?>previously_approved" value="1" <?php echo (get_option(self::TD.'previously_approved', '') ? ' checked="checked" ' : ''); ?> />
-         <label for="<?php echo self::TD; ?>previously_approved"><?php _e('A topic or reply by a previously approved author', self::TD); ?></label>
-      </td>
-      </tr>
 
-      <tr valign="top">
+   <tr valign="top">
       <th scope="row"><?php _e('Anonymous topics and replies', self::TD); ?></th>
       <td>
          <input type="checkbox" id="<?php echo self::TD; ?>always_approve_topics" name="<?php echo self::TD; ?>always_approve_topics" value="1" <?php echo (get_option(self::TD.'always_approve_topics', '') ? ' checked="checked" ' : ''); ?> />
@@ -1377,6 +1485,32 @@ class bbPressModeration {
          <label for="<?php echo self::TD; ?>always_approve_replies"><?php _e('Always moderate replies', self::TD); ?></label>
       </td>
    </tr>
+   
+   <tr valign="top">
+      <th scope="row"><?php _e('Registered user topics and replies', self::TD); ?></th>
+      <td>
+         <input type="checkbox" id="<?php echo self::TD; ?>always_approve_topics_registered" name="<?php echo self::TD; ?>always_approve_topics_registered" value="1" <?php echo (get_option(self::TD.'always_approve_topics_registered', '') ? ' checked="checked" ' : ''); ?> />
+         <label for="<?php echo self::TD; ?>always_approve_topics_registered"><?php _e('Always moderate topics', self::TD); ?></label>
+      </td>
+   </tr>
+   
+   
+   <tr>
+            <th scope="row"><?php _e('', self::TD); ?></th>
+      <td>
+         <input type="checkbox" id="<?php echo self::TD; ?>always_approve_replies_registered" name="<?php echo self::TD; ?>always_approve_replies_registered" value="1" <?php echo (get_option(self::TD.'always_approve_replies_registered', '') ? ' checked="checked" ' : ''); ?> />
+         <label for="<?php echo self::TD; ?>always_approve_replies_registered"><?php _e('Always moderate replies', self::TD); ?></label>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <th scope="row"><?php _e('Do not moderate', self::TD); ?></th>
+      <td>
+         <input type="checkbox" id="<?php echo self::TD; ?>previously_approved" name="<?php echo self::TD; ?>previously_approved" value="1" <?php echo (get_option(self::TD.'previously_approved', '') ? ' checked="checked" ' : ''); ?> />
+         <label for="<?php echo self::TD; ?>previously_approved"><?php _e('A topic or reply by a previously approved author', self::TD); ?></label>
+      </td>
+      </tr>
+   
    <tr>
       <th scope="row"><?php _e('Front end moderation', self::TD); ?></th>
       <td>
@@ -1469,6 +1603,95 @@ class bbPressModeration {
             }
          }
       }
+   }
+   
+   /*
+   *  Forum tweaks
+   */
+   
+   //  check if person who browse the forum is logged in.
+   function fv_bbpress_tweaks_membership_user() {
+      if( current_user_can('access_s2member_level1') )  {
+         return true;
+      }
+   }
+
+   // If somebody isn't logged in, he (she) won't see whole reply. 
+   function fv_bbpress_tweaks_post_text($content) {
+      if( !$this->fv_bbpress_tweaks_membership_user() ) {
+         $content = explode( ' ', $content, 12 );
+         unset( $content[11] );
+         $content = implode( ' ', $content ).'&hellip;<br /><br /><em>(message shortened)</em>';
+      }
+      
+      return $content;
+   }
+
+   //  make sure guests don't see person's gravatar
+   //add_filter( 'get_avatar', 'fv_bbpress_tweaks_get_avatar', 10, 6 );
+   function fv_bbpress_tweaks_get_avatar( $avatar ) {
+      if( ( bbp_is_forum_archive() || bbp_is_topic_archive() || bbp_is_single_forum() || bbp_is_single_topic() || bbp_is_single_reply() ) && !$this->fv_bbpress_tweaks_membership_user() ) {
+         $aArgs = func_get_args();
+         
+         // copy from wp-includes/pluggable.php
+         $avatar = sprintf(
+         "<img alt='%s' src='%s' srcset='%s' class='%s' height='%d' width='%d' %s/>",
+         esc_attr( $aArgs[4] ),
+         esc_url( get_option('avatar_default') ),
+         esc_attr( get_option('avatar_default')." 2x" ),
+         esc_attr( join( ' ', array( 'avatar', 'avatar-' . (int) $aArgs[2], 'photo' ) ) ),
+         (int) $aArgs[5]['height'],
+         (int) $aArgs[5]['width'],
+         $args['extra_attr']
+         );
+         
+       }  
+       
+       return $avatar;
+   }
+
+   function fv_bbpress_tweaks_forum_user_info_remove( $sHTML ) {
+      if( !$this->fv_bbpress_tweaks_membership_user() ) {
+         if( !bbp_is_single_topic() ) {
+            return '';
+         }
+    
+    $sHTML = <<<HTML
+    <div class="bbp-author-avatar">
+HTML;
+    $sHTML .= get_avatar( 'defaultavatar@example.com', 80 );
+    $sHTML .= <<<HTML
+    </div><br /><a name="anchor" class="bbp-author-name">*****</a><br /><div class="bbp-author-role"></div>
+HTML;
+      }
+      return $sHTML;
+   }
+
+   function empty_avatar($avatar){
+      if( !$this->fv_bbpress_tweaks_membership_user() ) {
+         return "";
+      }
+      return $avatar;
+   }   
+   
+   function fv_bbpress_tweaks_forum_remove_started_by_before() {
+      if( !$this->fv_bbpress_tweaks_membership_user() ) {
+         ob_start();
+      }
+   }   
+   
+   function fv_bbpress_tweaks_forum_remove_started_by_after() {
+     if( !$this->fv_bbpress_tweaks_membership_user() ) {
+       ob_get_clean();
+     }
+   }
+   
+   function fv_bbpress_tweaks_auto_subscribe( $checked, $topic_subscribed  ) {
+
+    if( $topic_subscribed == 0 )
+        $topic_subscribed = true;
+
+    return checked( $topic_subscribed, true, false );
    }
 }
 
