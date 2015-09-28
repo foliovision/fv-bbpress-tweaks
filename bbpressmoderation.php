@@ -145,7 +145,7 @@ class bbPressModeration {
     }
   }
   
-  function fv_mycakeschool_get_ids(){
+  function fv_bbpress_tweaks_get_ids(){
       if( is_user_logged_in() ){
         global $wpdb;
         return $wpdb->get_col( "SELECT ID FROM $wpdb->posts WHERE post_author = '".get_current_user_id()."' AND post_type IN ( 'topic', 'reply' )" );        
@@ -435,7 +435,7 @@ class bbPressModeration {
 
       $post = get_post( $post_id );
       $aIds = $this->cookie_get_ids();
-      $aIds_registered = $this->fv_mycakeschool_get_ids();
+      $aIds_registered = $this->fv_bbpress_tweaks_get_ids();
       if ($post && $post->post_status == 'pending') {
          if (current_user_can('moderate')) {
             // Admin can see body
@@ -957,7 +957,7 @@ class bbPressModeration {
       // What action are we trying to perform?
       switch ( $action ) {
          case 'bbp_approve_reply':
-            $this->fv_mycakeschool_sent_email_approve($reply_id);
+            $this->fv_bbpress_tweaks_sent_email_approve($reply_id);
             check_ajax_referer( 'approve-reply_' . $reply_id );
    
             $success  = $this->bbp_approve_reply( $reply_id );
@@ -1008,7 +1008,7 @@ class bbPressModeration {
       }
    }
    
-   function fv_mycakeschool_sent_email_approve($reply_id){
+   function fv_bbpress_tweaks_sent_email_approve($reply_id){
         
         /** Validation ************************************************************/
 
@@ -1327,7 +1327,7 @@ Your reply was approved by admin.', 'bbpress' ),
       global $menu;
       global $wpdb;
       
-      add_options_page(__('bbPress Moderation', self::TD), __('bbPress Moderation', self::TD), 
+      add_options_page(__('FV bbPress Tweaks', self::TD), __('FV bbPress Tweaks', self::TD), 
                         'manage_options', self::TD, array($this, 'options'));
       
       /*
