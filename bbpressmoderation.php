@@ -1318,7 +1318,7 @@ Your reply was approved by admin.', 'bbpress' ),
             $message .= $post->post_title . "\r\n" . $post->post_content . "\r\n\r\n";
          }
          
-         @wp_mail(get_option('admin_email'), sprintf(__('[%s] bbPress Moderation - %s', self::TD), $blogname, $title), $message);
+         @wp_mail(get_option('admin_email'), sprintf(__('[%s] bbPress Moderation - %s', self::TD), $blogname, $title), $message, array( 'Reply-To: '.$author->user_email ) );
       }
    }
    
