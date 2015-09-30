@@ -1295,6 +1295,8 @@ Your reply was approved by admin.', 'bbpress' ),
          
          $objPost = get_post($post_id);
          if( $objPost ) {
+            if( $objPost->post_status == 'spam' ) return;
+          
             $objAuthor = get_userdata($objPost->post_author);
    
             if( $objAuthor !== false ) {
@@ -1317,7 +1319,7 @@ Your reply was approved by admin.', 'bbpress' ),
             
             $sMessage  = sprintf(__('New '.$objPost->post_type.' by '.$sPosterName.' '.$sStatus.' on your site %s: %s', self::TD), $blogname, get_permalink($objPost->ID)) . "\r\n\r\n";
             $sMessage .= $objPost->post_content;
-            
+                        
             $sSubject = $objPost->post_title;
             if( $objPost->post_type == 'reply' ) {
                $objTopic = get_post($objPost->post_parent);
