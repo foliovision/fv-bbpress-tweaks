@@ -104,12 +104,14 @@ class bbPressModeration {
          add_action( 'bbp_theme_after_topic_started_by',array( $this, 'fv_bbpress_tweaks_forum_remove_started_by_after') );
       }
 
-    add_action( 'init', array( $this, 'cookie_check' ) );
-
-    add_filter( 'bbp_current_user_can_access_create_reply_form', array( $this, 'moderated_posts_allow_reply' ) );
-    add_filter( 'post_type_link', array( $this, 'post_type_link' ), 11, 4 );
-    add_filter( 'posts_results', array( $this, 'moderated_posts_remove' ) );
-    add_filter( 'pre_get_posts', array( $this, 'moderated_posts_for_poster' ) );
+      add_action( 'init', array( $this, 'cookie_check' ) );
+   
+      add_filter( 'bbp_current_user_can_access_create_reply_form', array( $this, 'moderated_posts_allow_reply' ) );
+      add_filter( 'post_type_link', array( $this, 'post_type_link' ), 11, 4 );
+      add_filter( 'posts_results', array( $this, 'moderated_posts_remove' ) );
+      add_filter( 'pre_get_posts', array( $this, 'moderated_posts_for_poster' ) );
+    
+      add_filter( 'bbp_get_do_not_reply_address', array( $this, 'fix_forum_from_address') );
 
    }
    
@@ -132,30 +134,34 @@ class bbPressModeration {
       return true;
    }
   
-  function cookie_check() {
-    if( isset($_COOKIE['comment_author_email_'.COOKIEHASH]) ) {
-      $this->cookie = $_COOKIE['comment_author_email_'.COOKIEHASH];
-    }
-  }
-  
-  function cookie_get_ids() {
-    if( $this->cookie ) {
-      global $wpdb;
-      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type IN ( 'topic', 'reply' )" ); //fix by fvKajo from:
-//      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type = 'topic'" );
-    } else {
-      return false;
-    }
-  }
-  
-  function fv_bbpress_tweaks_get_ids(){
+   function cookie_check() {
+      if( isset($_COOKIE['comment_author_email_'.COOKIEHASH]) ) {
+         $this->cookie = $_COOKIE['comment_author_email_'.COOKIEHASH];
+      }
+   }
+   
+   function cookie_get_ids() {
+      if( $this->cookie ) {
+         global $wpdb;
+         return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type IN ( 'topic', 'reply' )" ); //fix by fvKajo from:
+   //      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type = 'topic'" );
+      } else {
+         return false;
+      }
+   }
+   
+   function fix_forum_from_address() {
+      return get_option('fv_bbpress_email');
+   }
+   
+   function fv_bbpress_tweaks_get_ids(){
       if( is_user_logged_in() ){
-        global $wpdb;
-        return $wpdb->get_col( "SELECT ID FROM $wpdb->posts WHERE post_author = '".get_current_user_id()."' AND post_type IN ( 'topic', 'reply' )" );        
+         global $wpdb;
+         return $wpdb->get_col( "SELECT ID FROM $wpdb->posts WHERE post_author = '".get_current_user_id()."' AND post_type IN ( 'topic', 'reply' )" );        
       }
       return false;
-  }
-   
+   }
+    
    /**
     * Deactivate
     * @return boolean
@@ -194,14 +200,13 @@ class bbPressModeration {
   }
   
   
-  function moderated_posts_for_poster( $query ) { //  users with cookie get even the pending posts
-    
-    if( (isset($query->query['post_type']) && $query->query['post_type'] == 'reply') && ( $this->cookie || is_user_logged_in() )  ) {
+  function moderated_posts_for_poster( $query ) { //  users with cookie get even the pending posts 
+    if( (isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' ) ) && ( $this->cookie || is_user_logged_in() )  ) {
       $query->query_vars['post_status'] = 'publish,pending';
     }
     
     
-    if( isset($query->query['post_type']) && $query->query['post_type'] == 'reply' && isset($query->query['edit']) && $query->query['edit'] = 1 ) {
+    if( isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' ) && isset($query->query['edit']) && $query->query['edit'] = 1 ) {
       $query->query_vars['post_status'] = 'publish,pending';
       $query->query['p'] = $query->query['name'];
       $query->query_vars['p'] = $query->query['name'];
@@ -960,7 +965,7 @@ class bbPressModeration {
       // What action are we trying to perform?
       switch ( $action ) {
          case 'bbp_approve_reply':
-            $this->fv_bbpress_tweaks_sent_email_approve($reply_id);
+            //$this->fv_bbpress_tweaks_sent_email_approve($reply_id);
             check_ajax_referer( 'approve-reply_' . $reply_id );
    
             $success  = $this->bbp_approve_reply( $reply_id );
@@ -1255,11 +1260,8 @@ Your reply was approved by admin.', 'bbpress' ),
    function new_reply($reply_id = 0, $topic_id = 0, $forum_id = 0, $anonymous_data = false, $reply_author = 0) {
       $reply_id = bbp_get_reply_id( $reply_id );
       
-      $status = bbp_get_reply_status($reply_id);
+      $this->notify_admin($reply_id);
       
-      if ($status == 'pending') {
-         $this->notify_admin($reply_id);
-      }
    }
    
    /**
@@ -1273,11 +1275,8 @@ Your reply was approved by admin.', 'bbpress' ),
    function new_topic($topic_id = 0, $forum_id = 0, $anonymous_data = false, $topic_author = 0) {
       $topic_id = bbp_get_topic_id( $topic_id );
       
-      $status = bbp_get_topic_status($topic_id);
-      
-      if ($status == 'pending') {
-         $this->notify_admin($topic_id);
-      }
+      $this->notify_admin($topic_id);
+
    }
    
    /**
@@ -1288,39 +1287,52 @@ Your reply was approved by admin.', 'bbpress' ),
       if (get_option(self::TD . 'notify')) {
          
          $blogname = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
-         $blogurl = get_option('home');
-         $message  = sprintf(__('New topic/reply awaiting moderation on your site %s: %s', self::TD), $blogname, $blogurl) . "\r\n\r\n";
-
-         /* Add body of topic/reply to email */
-         $post = get_post($post_id);
-         $title = '';
          
-         if ($post) {
-            $title = $post->post_title;
-            $message .= get_permalink($post->ID) . "\r\n\r\n";
-            $author = get_userdata($post->post_author);
-            $message .= "The following content was posted\r\n";
-            if ($author !== false) {
-               $name = $author->user_firstname . " " . $author->user_lastname;
+         $sSubject = '(something failed)';
+         $sMessage = 'Unable to fetch post '.$post_id;
+         
+         $objPost = get_post($post_id);
+         if( $objPost ) {
+            $objAuthor = get_userdata($objPost->post_author);
+   
+            if( $objAuthor !== false ) {
+               $name = $objAuthor->user_firstname . " " . $objAuthor->user_lastname;
                $name = trim($name);
-               if (empty($name)) {
-                  $name = $author->display_name;
+               if( empty($name) ) {
+                  $name = $objAuthor->display_name;
                }
-               if ($name == $author->user_login) {
+               if( $name == $objAuthor->user_login ) {
                   $name = '';
                } else {
                   $name = ' (' . $name . ')';
                }
-               $message .= "by " . $author->user_login .  $name . "\r\n\r\n";
+               $sPosterName = $objAuthor->user_login .  $name;
             } else {
-               $message .= "by Anonymous\r\n\r\n";
+               $sPosterName = "Anonymous\r\n\r\n";
             }
-            $message .= $post->post_title . "\r\n" . $post->post_content . "\r\n\r\n";
+            
+            $sStatus = ( $objPost->post_status == 'publish' ) ? 'was posted': 'is awaiting moderation';
+            
+            $sMessage  = sprintf(__('New '.$objPost->post_type.' by '.$sPosterName.' '.$sStatus.' on your site %s: %s', self::TD), $blogname, get_permalink($objPost->ID)) . "\r\n\r\n";
+            $sMessage .= $objPost->post_content;
+            
+            $sSubject = $objPost->post_title;
+            if( $objPost->post_type == 'reply' ) {
+               $objTopic = get_post($objPost->post_parent);
+               $sSubject = $objTopic->post_title;
+            }
+            
          }
-         
-         @wp_mail(get_option('admin_email'), sprintf(__('[%s] bbPress Moderation - %s', self::TD), $blogname, $title), $message, array( 'Reply-To: '.$author->user_email ) );
+
+         add_filter( 'wp_mail_from_name', array( 'bbPressModeration', 'custom_wp_mail_from_name' ) );
+                  
+         @wp_mail( get_option('fv_bbpress_email'), $sSubject, $sMessage, array( 'Reply-To: '.$objAuthor->user_email ) );   // todo: notifications email address!
       }
    }
+   
+   function custom_wp_mail_from_name( $original_email_from ) {
+      return get_option('blogname').' Support Forums';   // todo: option for what it should say!
+   }   
    
    /**
     * Show pending counts for topics/replies and

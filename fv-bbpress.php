@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FV bbPress Tweaks
  * Description: Improve your forum URL structure, allow guest posting and lot more
- * Version: 0.1
+ * Version: 0.2
  * Author: Foliovision
  * Author URI: http://foliovision.com
  */
@@ -190,6 +190,8 @@ The %sitename% Team',
       add_action( 'admin_menu', array($this, 'admin_menu') );
 
 
+      add_filter( 'bbp_is_topic_published', array( $this, 'allow_notifications_for_pending' ), 10, 2 );
+      add_action( 'bbp_new_reply', array( $this, 'allow_notifications_for_pending_record_id' ), 10, 2 );
    }
 
 
@@ -197,6 +199,26 @@ The %sitename% Team',
 
    function admin_menu(){
       add_management_page( 'FV BBPress Tweaks', 'FV BBPress Tweaks', 'manage_options', 'fv-bbpress-tweaks', array($this, 'options_panel') );
+   }
+   
+   
+   
+   
+   function allow_notifications_for_pending( $topic_status) {
+      $aArgs = func_get_args();
+      
+      if( isset($this->idTopicJustPosted) && $this->idTopicJustPosted == $aArgs[1] ) {              
+         return true;
+      }
+      return (bool) $topic_status;
+   }
+   
+   
+   
+   
+   function allow_notifications_for_pending_record_id( $reply_id ) {
+      $aArgs = func_get_args();
+      $this->idTopicJustPosted = $aArgs[1];
    }
 
 
@@ -703,6 +725,17 @@ $aData:
             wp_update_user( $objUser );
          }
       }
+
+      $objPost = get_post($iPostIDtoFix);
+      if( $objPost->post_type == 'reply' ) {
+          $objTopic = get_post($objPost->post_parent);
+          $iPostIDtoFix = $objTopic->ID;
+       }
+
+      if( !is_user_logged_in() ) {  // we assume that if user is not logged in he needs the subscription
+         $res = bbp_add_user_topic_subscription( $user_id, $iPostIDtoFix );
+      }
+      
    }
 
 
@@ -869,3 +902,12 @@ $aData:
 include( __DIR__ . "/fv_bbpress_option_dependencies.php" );
 
 $FV_bbPress = new FV_bbPress;
+
+
+
+add_filter( 'wp_mail', 'fv_log_wp_mail' );
+
+function fv_log_wp_mail( $atts ) {
+   file_put_contents( ABSPATH.'wp_mail-'.sanitize_title(NONCE_SALT).'.log', date('r').":\n".var_export($atts,true)."\n--------\n\n", FILE_APPEND );
+   return $atts;
+}
