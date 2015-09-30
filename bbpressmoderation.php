@@ -60,8 +60,8 @@ class bbPressModeration {
 
       add_filter( 'bbp_current_user_can_publish_replies', array( $this, 'can_reply' ) );
       
-      add_action( 'bbp_new_topic', array( $this, 'new_topic' ), 10, 4 );
-      add_action( 'bbp_new_reply', array( $this, 'new_reply' ), 10, 5 );
+      add_action( 'bbp_new_topic', array( $this, 'new_topic' ), 999999, 4 );
+      add_action( 'bbp_new_reply', array( $this, 'new_reply' ), 999999, 5 );
       
       //load_plugin_textdomain(self::TD, false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
       
