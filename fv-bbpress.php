@@ -803,7 +803,7 @@ $aData:
    public function forum_post_type_link($link) {
       $args = func_get_args();
       $post = $args[1];
-      
+
       if( is_object($post) && $post->post_type == 'forum' && in_array( $post->post_status, array( 'publish', 'hidden' ) ) ) {
          $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post)) );
          
@@ -812,7 +812,7 @@ $aData:
          //wp_cache_set( 'fv_bbpress_topic_link-'.$post->ID, $link, 'fv_bbpress' );
          
       }elseif( is_object($post) && $post->post_type == 'reply' && in_array( $post->post_status, array( 'publish', 'pending' ) ) ) {
-         $link = user_trailingslashit( home_url(bbp_get_reply_slug().'/'.$this->get_link_recursively($post) )); // todo : check links to replies
+         $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post) )); // todo : check links to replies
          
       }
 

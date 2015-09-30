@@ -200,7 +200,9 @@ class bbPressModeration {
   }
   
   
-  function moderated_posts_for_poster( $query ) { //  users with cookie get even the pending posts 
+  function moderated_posts_for_poster( $query ) { //  users with cookie get even the pending posts
+    if( is_admin() ) return;
+    
     if( (isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' ) ) && ( $this->cookie || is_user_logged_in() )  ) {
       $query->query_vars['post_status'] = 'publish,pending';
     }

@@ -27,6 +27,8 @@ Here is a short description of the plugin.  This should be no more than 150 char
 * Automatically subscribing guest users to topics which they post or post into
 * Fix for displaying of pending topic to its poster after posted
 * Fix for replies to pending topics to trigger notifications
+* Fix for reply links
+* Fix for wp-admin reply list
 * Improving notificaiton subject and content
 * Removing the note about reply being published to its author
 * Sending all new topics and replies to a set address, not just pending
