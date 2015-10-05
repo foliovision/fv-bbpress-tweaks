@@ -94,6 +94,7 @@ class bbPressModeration {
       if(get_option(self::TD.'limit_guest_access')){
          // If FV bbPress Settings->Limit guest access is checked
          
+         add_action( 'template_redirect', array($this, 'fv_bbpress_tweaks_hide_user_profile') );
          add_filter('bbp_get_reply_content',array( $this,'fv_bbpress_tweaks_post_text') );
          add_filter('bbp_get_topic_content',array( $this,'fv_bbpress_tweaks_post_text') );
          add_filter( 'get_avatar',array( $this, 'fv_bbpress_tweaks_get_avatar' ),10,6 );         
@@ -1630,6 +1631,7 @@ Your reply was approved by admin.', 'bbpress' ),
       if( current_user_can('access_s2member_level1') )  {
          return true;
       }
+      return false;
    }
 
    // If somebody isn't logged in, he (she) won't see whole reply. 
@@ -1708,6 +1710,14 @@ HTML;
         $topic_subscribed = true;
 
     return checked( $topic_subscribed, true, false );
+   }   
+   
+   function fv_bbpress_tweaks_hide_user_profile($content){
+      if( !$this->fv_bbpress_tweaks_membership_user() && bbp_is_single_user()) {
+         wp_redirect( home_url( get_option('_bbp_root_slug') ) );
+         exit();
+      }     
+      return $content;
    }
 }
 
