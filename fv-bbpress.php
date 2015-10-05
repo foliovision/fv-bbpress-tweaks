@@ -910,9 +910,9 @@ $FV_bbPress = new FV_bbPress;
 
 
 
-add_filter( 'wp_mail', 'fv_log_wp_mail' );
+add_filter( 'wp_mail', 'fv_bbpress_log_wp_mail' );
 
-function fv_log_wp_mail( $atts ) {
+function fv_bbpress_log_wp_mail( $atts ) {
    file_put_contents( ABSPATH.'wp_mail-'.sanitize_title(NONCE_SALT).'.log', date('r').":\n".var_export($atts,true)."\n--------\n\n", FILE_APPEND );
    return $atts;
 }
