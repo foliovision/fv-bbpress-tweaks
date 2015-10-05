@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FV bbPress Tweaks
  * Description: Improve your forum URL structure, allow guest posting and lot more
- * Version: 0.2
+ * Version: 0.2.1
  * Author: Foliovision
  * Author URI: http://foliovision.com
  */
@@ -178,8 +178,8 @@ The %sitename% Team',
       add_filter( 'post_type_link', array( $this, 'forum_post_type_link' ), 100000, 4); //fvKajo 20150612
 
       if( $this->options['participant_importing'] ) {
-         add_filter('bbp_new_topic_pre_insert', array($this, 'pre_insert'), 1);
-         add_filter('bbp_new_reply_pre_insert', array($this, 'pre_insert'), 1);
+         add_filter('bbp_new_topic_pre_insert', array($this, 'pre_insert'), 2);  // 2 because of bbPress Akismet module
+         add_filter('bbp_new_reply_pre_insert', array($this, 'pre_insert'), 2);
          add_action('bbp_new_topic', array($this, 'new_topic'), 10, 4);
          add_action('bbp_new_reply', array($this, 'new_reply'), 10, 5);
 
@@ -587,8 +587,13 @@ The %sitename% Team',
       //if no user with this email address exists, create them
       $iUserID = email_exists( $strMail );
       if( false === $iUserID ) {
-         // user doesn't exist yet
-         $iUserID = $this->fv_add_forum_participant( $aData );
+         if( isset($data['bbp_akismet_result']) && $data['bbp_akismet_result'] == 'true' ) {
+            file_put_contents(ABSPATH.'fv_add_forum_participant_spam.log',date('r')." ----:\n".var_export($aData,true)."\n".var_export($data,true)."\n",FILE_APPEND);         
+         } else {
+            file_put_contents(ABSPATH.'fv_add_forum_participant.log',date('r')." ----:\n".var_export($aData,true)."\n".var_export($data,true)."\n",FILE_APPEND);         
+            $iUserID = $this->fv_add_forum_participant( $aData );
+         }
+
       }
       return $iUserID;
    }
