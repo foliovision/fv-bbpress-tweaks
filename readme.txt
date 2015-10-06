@@ -20,6 +20,18 @@ Here is a short description of the plugin.  This should be no more than 150 char
 
 == Changelog ==
 
+= 0.2.3 =
+
+Fix for reply edit and merge links - not using our custom URLs there for better compatibility
+
+= 0.2.2 =
+
+"Limit guest access" now hides the user profile (redirects to forum homepage)
+
+= 0.2.1 =
+
+Fixing cooperation with bbPress FV Antispam module.
+
 = 0.2 =
 
 * Added debug log into wp_mail-{code}.log

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FV bbPress Tweaks
  * Description: Improve your forum URL structure, allow guest posting and lot more
- * Version: 0.2.2
+ * Version: 0.2.3
  * Author: Foliovision
  * Author URI: http://foliovision.com
  */
@@ -65,8 +65,8 @@ class FV_bbPress {
    var $aDefaultOptions;
    var $aOptionDependencies;
    var $aOptionTypes;
-
-
+   
+   var $bEnabled = true;
 
 
    public function __construct() {
@@ -192,6 +192,11 @@ The %sitename% Team',
 
       add_filter( 'bbp_is_topic_published', array( $this, 'allow_notifications_for_pending' ), 10, 2 );
       add_action( 'bbp_new_reply', array( $this, 'allow_notifications_for_pending_record_id' ), 10, 2 );
+      
+      add_action( 'bbp_theme_before_topic_admin_links', array( $this, 'disable' ) );
+      add_action( 'bbp_theme_after_topic_admin_links', array( $this, 'enable' ) );
+      add_action( 'bbp_theme_before_reply_admin_links', array( $this, 'disable' ) );
+      add_action( 'bbp_theme_after_reply_admin_links', array( $this, 'enable' ) );
    }
 
 
@@ -219,6 +224,20 @@ The %sitename% Team',
    function allow_notifications_for_pending_record_id( $reply_id ) {
       $aArgs = func_get_args();
       $this->idTopicJustPosted = $aArgs[1];
+   }
+   
+   
+   
+   
+   function disable() {
+      $this->bEnabled = false;
+   }
+   
+   
+   
+   
+   function enable() {
+      $this->bEnabled = true;
    }
 
 
@@ -808,6 +827,10 @@ $aData:
    public function forum_post_type_link($link) {
       $args = func_get_args();
       $post = $args[1];
+      
+      if( !$this->bEnabled || stripos($link,'/edit') !== false ) {
+         return $link;
+      }
 
       if( is_object($post) && $post->post_type == 'forum' && in_array( $post->post_status, array( 'publish', 'hidden' ) ) ) {
          $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post)) );
