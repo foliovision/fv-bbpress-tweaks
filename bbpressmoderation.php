@@ -1631,6 +1631,11 @@ Your reply was approved by admin.', 'bbpress' ),
       if( current_user_can('access_s2member_level1') )  {
          return true;
       }
+      
+      if( function_exists('rcp_is_active') && rcp_is_active() ) {
+         return true;
+      }      
+      
       return false;
    }
 
