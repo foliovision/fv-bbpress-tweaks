@@ -20,6 +20,10 @@ Here is a short description of the plugin.  This should be no more than 150 char
 
 == Changelog ==
 
+= 0.2.4 =
+
+Fixes for topic and reply editing and trashing.
+
 = 0.2.3 =
 
 Fix for reply edit and merge links - not using our custom URLs there for better compatibility
