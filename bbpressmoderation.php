@@ -209,6 +209,8 @@ class bbPressModeration {
   
   
   function moderated_posts_for_poster( $query ) { //  users with cookie get even the pending posts
+    
+    
     if( is_admin() ) return;
     
     if( (isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' ) ) && ( $this->cookie || is_user_logged_in() )  ) {
@@ -218,14 +220,14 @@ class bbPressModeration {
     }
     
     
-    if( isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' ) && isset($query->query['edit']) && $query->query['edit'] = 1 ) {
+    if( isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' ) && isset($query->query['edit']) && $query->query['edit'] == 1 ) {
       $query->query_vars['post_status'] = 'publish,pending';
-      $query->query['name'] = $query->query['name'];
+      /*$query->query['name'] = $query->query['name'];
       $query->query_vars['name'] = $query->query['name'];
       unset($query->query['reply']);
       unset($query->query['name']);
       unset($query->query_vars['reply']);
-      unset($query->query_vars['name']);
+      unset($query->query_vars['name']);*/
     
     }
     
