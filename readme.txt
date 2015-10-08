@@ -20,21 +20,26 @@ Here is a short description of the plugin.  This should be no more than 150 char
 
 == Changelog ==
 
+= 0.2.4.1 =
+
+* Removing core "Stick (To Front)" and "Spam" topic and reply moderation links.
+* Removing plugin's "Approve all by author" topic and reply moderation link
+
 = 0.2.4 =
 
-Fixes for topic and reply editing and trashing.
+* Fixes for topic and reply editing and trashing.
 
 = 0.2.3 =
 
-Fix for reply edit and merge links - not using our custom URLs there for better compatibility
+* Fix for reply edit and merge links - not using our custom URLs there for better compatibility
 
 = 0.2.2 =
 
-"Limit guest access" now hides the user profile (redirects to forum homepage)
+* "Limit guest access" now hides the user profile (redirects to forum homepage)
 
 = 0.2.1 =
 
-Fixing cooperation with bbPress FV Antispam module.
+* Fixing cooperation with bbPress FV Antispam module.
 
 = 0.2 =
 

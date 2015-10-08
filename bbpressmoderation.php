@@ -102,7 +102,7 @@ class bbPressModeration {
       add_filter( 'get_avatar',array( $this, 'fv_bbpress_tweaks_get_avatar' ),10,6 );         
       add_filter('bbp_get_reply_author_link',array( $this,'fv_bbpress_tweaks_forum_user_info_remove') );
       add_filter('bbp_get_topic_author_link',array( $this,'fv_bbpress_tweaks_forum_user_info_remove') );         
-      add_filter('bbp_get_topic_author_avatar',array( $this,'epmty_avatar') );
+      add_filter('bbp_get_topic_author_avatar',array( $this,'empty_avatar') );
       add_action( 'bbp_theme_before_topic_started_by',array( $this, 'fv_bbpress_tweaks_forum_remove_started_by_before') );
       add_action( 'bbp_theme_after_topic_started_by',array( $this, 'fv_bbpress_tweaks_forum_remove_started_by_after') );
     }
@@ -480,15 +480,17 @@ class bbPressModeration {
     }
     $aNewArgs = array(
         'approve' => $this->bbp_get_reply_approve_link( $id ),
-        'approve_all' => $this->bbp_get_reply_approve_link( $id, true )
+        //'approve_all' => $this->bbp_get_reply_approve_link( $id, true )
       );
     $aNewArgs = array_reverse($aNewArgs, true);
     $args = array_reverse($args, true);
     foreach( $aNewArgs as $key => $val ) {
       $args[$key] = $val;
     }
-    return array_reverse($args, true); 
-    return $args;
+    
+    unset($args['spam']);
+    
+    return array_reverse($args, true);
   }
   
   function bbp_topic_admin_links( $args, $id ) {
@@ -498,15 +500,18 @@ class bbPressModeration {
     }
     $aNewArgs = array(
         'approve' => $this->bbp_get_topic_approve_link( $id ),
-        'approve_all' => $this->bbp_get_topic_approve_link( $id, true )
+        //'approve_all' => $this->bbp_get_topic_approve_link( $id, true )
       );
     $aNewArgs = array_reverse($aNewArgs, true);
     $args = array_reverse($args, true);
     foreach( $aNewArgs as $key => $val ) {
       $args[$key] = $val;
     }
-    return array_reverse($args, true); 
-    return $args;
+  
+    unset($args['stick']);
+    unset($args['spam']);    
+    
+    return array_reverse($args, true);
   }
   
   function add_approval_row_action_links( $actions, $post ) {
