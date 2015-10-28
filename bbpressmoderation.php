@@ -686,7 +686,7 @@ class bbPressModeration {
     }
     
     // Only proceed if GET is a topic toggle action
-    if ( bbp_is_get_request() && !empty( $_GET['topic_id'] ) ) {
+    if ( function_exists('bbp_is_get_request') && bbp_is_get_request() && !empty( $_GET['topic_id'] ) ) {
       $action    = $_GET['action'];            // What action is taking place?
       $topic_id  = (int) $_GET['topic_id'];    // What's the topic id?
       $success   = false;                      // Flag
@@ -760,7 +760,7 @@ class bbPressModeration {
     //if ( $this->bail() ) return;
     
     // Only proceed if GET is a topic toggle action
-    if ( bbp_is_get_request() && !empty( $_GET['topic_id'] ) ) {
+    if ( function_exists('bbp_is_get_request') && bbp_is_get_request() && !empty( $_GET['topic_id'] ) ) {
       $notice     = isset( $_GET['handle_row_actions_approve_topic_notice'] ) ?  // Which notice?
       stripslashes( urldecode( $_GET['handle_row_actions_approve_topic_notice'] ) ):
       '';
