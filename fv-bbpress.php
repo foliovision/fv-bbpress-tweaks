@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FV bbPress Tweaks
  * Description: Improve your forum URL structure, allow guest posting and lot more
- * Version: 0.2.4.1
+ * Version: 0.2.4.2
  * Author: Foliovision
  * Author URI: http://foliovision.com
  */
@@ -939,3 +939,238 @@ function fv_bbpress_log_wp_mail( $atts ) {
   file_put_contents( ABSPATH.'wp_mail-'.sanitize_title(NONCE_SALT).'.log', date('r').":\n".var_export($atts,true)."\n--------\n\n", FILE_APPEND );
   return $atts;
 }
+
+
+
+
+
+
+/**
+ * bbPress Replies Widget
+ *
+ * Adds a widget which displays the replies list
+ *
+ * @since bbPress (r2653)
+ *
+ * @uses WP_Widget
+ */
+class FV_BBP_Replies_Widget extends WP_Widget {
+
+	/**
+	 * bbPress Replies Widget
+	 *
+	 * Registers the replies widget
+	 *
+	 * @since bbPress (r2653)
+	 *
+	 * @uses apply_filters() Calls 'bbp_replies_widget_options' with the
+	 *                        widget options
+	 */
+	public function __construct() {
+		$widget_ops = apply_filters( 'fv_bbp_replies_widget_options', array(
+			'classname'   => 'fv_bbpress_widget_display_replies',
+			'description' => __( 'A list of the most recent topics and replies.', 'bbpress' )
+		) );
+
+		parent::__construct( false, __( 'FV bbPress Recent Activity', 'bbpress' ), $widget_ops );
+	}
+
+	/**
+	 * Register the widget
+	 *
+	 * @since bbPress (r3389)
+	 *
+	 * @uses register_widget()
+	 */
+	public static function register_widget() {
+		register_widget( 'FV_BBP_Replies_Widget' );
+	}
+
+	/**
+	 * Displays the output, the replies list
+	 *
+	 * @since bbPress (r2653)
+	 *
+	 * @param mixed $args
+	 * @param array $instance
+	 * @uses apply_filters() Calls 'bbp_reply_widget_title' with the title
+	 * @uses bbp_get_reply_author_link() To get the reply author link
+	 * @uses bbp_get_reply_id() To get the reply id
+	 * @uses bbp_get_reply_url() To get the reply url
+	 * @uses bbp_get_reply_excerpt() To get the reply excerpt
+	 * @uses bbp_get_reply_topic_title() To get the reply topic title
+	 * @uses get_the_date() To get the date of the reply
+	 * @uses get_the_time() To get the time of the reply
+	 */
+	public function widget( $args, $instance ) {
+
+		// Get widget settings
+		$settings = $this->parse_settings( $instance );
+
+		// Typical WordPress filter
+		$settings['title'] = apply_filters( 'widget_title',             $settings['title'], $instance, $this->id_base );
+
+		// bbPress filter
+		$settings['title'] = apply_filters( 'bbp_replies_widget_title', $settings['title'], $instance, $this->id_base );
+
+		global $wpdb;
+    $aIDs = $wpdb->get_col( "SELECT * FROM {$wpdb->posts} WHERE post_type = 'topic' AND post_status != 'publish' ");
+    
+		$widget_query = new WP_Query( array(
+			'post_type'           => array( bbp_get_reply_post_type(), bbp_get_topic_post_type() ),
+			'post_status'         => 'publish',
+			'posts_per_page'      => (int) $settings['max_shown'],
+			'ignore_sticky_posts' => true,
+			'no_found_rows'       => true,
+		) );
+
+		// Bail if no replies
+		if ( ! $widget_query->have_posts() ) {
+			return;
+		}
+
+		echo $args['before_widget'];
+
+		if ( !empty( $settings['title'] ) ) {
+			echo $args['before_title'] . $settings['title'] . $args['after_title'];
+		} ?>
+
+		<ul>
+
+			<?php while ( $widget_query->have_posts() ) : $widget_query->the_post(); ?>
+
+				<li>
+
+					<?php
+          if( in_array($widget_query->post->post_parent, $aIDs) ) continue;
+          
+					// Verify the reply ID
+					$reply_id   = bbp_get_reply_id( $widget_query->post->ID );
+					$reply_link = '<a class="bbp-reply-topic-title" href="' . esc_url( bbp_get_reply_url( $reply_id ) ) . '" title="' . esc_attr( bbp_get_reply_excerpt( $reply_id, 50 ) ) . '">' . bbp_get_reply_topic_title( $reply_id ) . '</a>';
+
+					// Only query user if showing them
+					if ( ! empty( $settings['show_user'] ) ) :
+						$author_link = bbp_get_reply_author_link( array( 'post_id' => $reply_id, 'type' => 'name', 'size' => 0 ) );
+					else :
+						$author_link = false;
+					endif;
+
+					// Reply author, link, and timestamp
+					if ( ! empty( $settings['show_date'] ) && !empty( $author_link ) ) :
+          
+						// translators: 1: reply author, 2: reply link, 3: reply timestamp
+						printf( _x( '%1$s '.$verb.' %2$s %3$s', 'widgets', 'bbpress' ), $author_link, $reply_link, '<div>' . bbp_get_time_since( get_the_time( 'U' ) ) . '</div>' );
+
+					// Reply link and timestamp
+					elseif ( ! empty( $settings['show_date'] ) ) :
+
+						// translators: 1: reply link, 2: reply timestamp
+						printf( _x( '%1$s %2$s',         'widgets', 'bbpress' ), $reply_link,  '<div>' . bbp_get_time_since( get_the_time( 'U' ) ) . '</div>'              );
+
+					// Reply author and title
+					elseif ( !empty( $author_link ) ) :
+          
+            $verb = get_post_type() == 'reply' ? 'replied to' : 'posted';          
+
+						// translators: 1: reply author, 2: reply link
+						printf( _x( '%1$s '.$verb.' %2$s',      'widgets', 'bbpress' ), $author_link, $reply_link                                                                 );
+
+					// Only the reply title
+					else :
+
+						// translators: 1: reply link
+						printf( _x( '%1$s',              'widgets', 'bbpress' ), $reply_link                                                                               );
+
+					endif;
+          
+          add_filter( 'excerpt_length', array( $this, 'excerpt_length' ) );
+          add_filter( 'excerpt_more', array( $this, 'excerpt_more' ), 999 );
+          the_excerpt();
+          remove_filter( 'excerpt_length', array( $this, 'excerpt_length' ) );
+          remove_filter( 'excerpt_more', array( $this, 'excerpt_more' ), 999 );
+					?>
+
+				</li>
+
+			<?php endwhile; ?>
+
+		</ul>
+
+		<?php echo $args['after_widget'];
+
+		// Reset the $post global
+		wp_reset_postdata();
+	}
+
+	/**
+	 * Update the reply widget options
+	 *
+	 * @since bbPress (r2653)
+	 *
+	 * @param array $new_instance The new instance options
+	 * @param array $old_instance The old instance options
+	 */
+	public function update( $new_instance = array(), $old_instance = array() ) {
+		$instance              = $old_instance;
+		$instance['title']     = strip_tags( $new_instance['title'] );
+		$instance['show_date'] = (bool) $new_instance['show_date'];
+		$instance['show_user'] = (bool) $new_instance['show_user'];
+		$instance['max_shown'] = (int) $new_instance['max_shown'];
+
+		return $instance;
+	}
+
+	/**
+	 * Output the reply widget options form
+	 *
+	 * @since bbPress (r2653)
+	 *
+	 * @param $instance Instance
+	 * @uses BBP_Replies_Widget::get_field_id() To output the field id
+	 * @uses BBP_Replies_Widget::get_field_name() To output the field name
+	 */
+	public function form( $instance = array() ) {
+
+		// Get widget settings
+		$settings = $this->parse_settings( $instance ); ?>
+
+		<p><label for="<?php echo $this->get_field_id( 'title'     ); ?>"><?php _e( 'Title:',                   'bbpress' ); ?> <input class="widefat" id="<?php echo $this->get_field_id( 'title'     ); ?>" name="<?php echo $this->get_field_name( 'title'     ); ?>" type="text" value="<?php echo esc_attr( $settings['title']     ); ?>" /></label></p>
+		<p><label for="<?php echo $this->get_field_id( 'max_shown' ); ?>"><?php _e( 'Maximum replies to show:', 'bbpress' ); ?> <input class="widefat" id="<?php echo $this->get_field_id( 'max_shown' ); ?>" name="<?php echo $this->get_field_name( 'max_shown' ); ?>" type="text" value="<?php echo esc_attr( $settings['max_shown'] ); ?>" /></label></p>
+		<p><label for="<?php echo $this->get_field_id( 'show_date' ); ?>"><?php _e( 'Show post date:',          'bbpress' ); ?> <input type="checkbox" id="<?php echo $this->get_field_id( 'show_date' ); ?>" name="<?php echo $this->get_field_name( 'show_date' ); ?>" <?php checked( true, $settings['show_date'] ); ?> value="1" /></label></p>
+		<p><label for="<?php echo $this->get_field_id( 'show_user' ); ?>"><?php _e( 'Show reply author:',       'bbpress' ); ?> <input type="checkbox" id="<?php echo $this->get_field_id( 'show_user' ); ?>" name="<?php echo $this->get_field_name( 'show_user' ); ?>" <?php checked( true, $settings['show_user'] ); ?> value="1" /></label></p>
+
+		<?php
+	}
+
+	/**
+	 * Merge the widget settings into defaults array.
+	 *
+	 * @since bbPress (r4802)
+	 *
+	 * @param $instance Instance
+	 * @uses bbp_parse_args() To merge widget settings into defaults
+	 */
+	public function parse_settings( $instance = array() ) {
+		return bbp_parse_args( $instance, array(
+			'title'     => __( 'Recent Replies', 'bbpress' ),
+			'max_shown' => 5,
+			'show_date' => false,
+			'show_user' => false
+		),
+		'replies_widget_settings' );
+	}
+  
+  
+  function excerpt_length() {
+    return 10;
+  }
+  
+  
+  function excerpt_more() {
+    return ' &hellip;';
+  }
+  
+
+}
+
+add_action( 'bbp_widgets_init', array( 'FV_BBP_Replies_Widget',   'register_widget' ), 10 );
