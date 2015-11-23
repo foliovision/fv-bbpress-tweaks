@@ -115,7 +115,7 @@ class bbPressModeration {
     add_action( 'init', array( $this, 'cookie_check' ) );
     
     add_filter( 'bbp_current_user_can_access_create_reply_form', array( $this, 'moderated_posts_allow_reply' ) );
-    add_filter( 'post_type_link', array( $this, 'post_type_link' ), 11, 4 );
+    //add_filter( 'post_type_link', array( $this, 'post_type_link' ), 11, 4 );  //  fix for broken reply editing
     add_filter( 'posts_results', array( $this, 'moderated_posts_remove' ) );
     add_filter( 'pre_get_posts', array( $this, 'moderated_posts_for_poster' ) );
     
@@ -267,7 +267,16 @@ class bbPressModeration {
   
   
   function pending_post_add_name( $data, $postarr ) {
-    $data['post_name'] = wp_unique_post_slug( sanitize_title($data['post_title']), false, 'publish', $data['post_type'], $data['post_parent'] );
+    
+    if( !empty($data['post_title']) ) {
+      $title = $data['post_title'];
+    } else {
+      $aTopic = get_post( $data['post_parent'] );
+      $title = get_the_title($aTopic->ID);
+    }
+    
+    $data['post_name'] = wp_unique_post_slug( sanitize_title($title), false, 'publish', $data['post_type'], $data['post_parent'] );
+    
     return $data;
   }
   
