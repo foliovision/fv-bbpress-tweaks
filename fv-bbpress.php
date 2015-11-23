@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FV bbPress Tweaks
  * Description: Improve your forum URL structure, allow guest posting and lot more
- * Version: 0.2.4.2
+ * Version: 0.2.4.2.dev
  * Author: Foliovision
  * Author URI: http://foliovision.com
  */
@@ -933,17 +933,6 @@ $FV_bbPress = new FV_bbPress;
 
 
 
-add_filter( 'wp_mail', 'fv_bbpress_log_wp_mail' );
-
-function fv_bbpress_log_wp_mail( $atts ) {
-  file_put_contents( ABSPATH.'wp_mail-'.sanitize_title(NONCE_SALT).'.log', date('r').":\n".var_export($atts,true)."\n--------\n\n", FILE_APPEND );
-  return $atts;
-}
-
-
-
-
-
 
 /**
  * bbPress Replies Widget
@@ -1174,3 +1163,15 @@ class FV_BBP_Replies_Widget extends WP_Widget {
 }
 
 add_action( 'bbp_widgets_init', array( 'FV_BBP_Replies_Widget',   'register_widget' ), 10 );
+
+
+
+
+add_action( 'bbp_theme_after_topic_title', 'fv_bbpress_solved' );
+
+function fv_bbpress_solved( $post_id = false ){
+  if( !$post_id ) $post_id = get_the_ID();    
+  if( get_post_meta( $post_id,'fv_bbp_solved', true ) ) {      
+    echo ' <span class="fv_bbpress_solved">[Solved]</span>';
+  }    
+}  

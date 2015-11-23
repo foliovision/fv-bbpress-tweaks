@@ -56,6 +56,7 @@ class bbPressModeration {
     add_filter( 'bbp_reply_admin_links', array( $this, 'bbp_reply_admin_links' ), 10, 2 );
     add_action( 'bbp_get_request', array( $this, 'bbp_approve_topic_handler' ), 2 );
     add_action( 'bbp_get_request', array( $this, 'bbp_approve_reply_handler' ), 2 );
+    add_action( 'bbp_get_request', array( $this, 'bbp_solve_topic_handler' ), 2 );
     
     // set checkbox "Notify me of follow-up replies via email" as checked by default
     add_filter( 'bbp_get_form_topic_subscribed', array( $this, 'fv_bbpress_tweaks_auto_subscribe'), 10, 2 );
@@ -88,10 +89,14 @@ class bbPressModeration {
       add_action( 'admin_notices',  array( $this, 'handle_row_actions_approve_topic_notice' ) );
       add_action( 'load-edit.php',  array( $this, 'handle_row_actions_approve_reply' ) );
       add_action( 'admin_notices',  array( $this, 'handle_row_actions_approve_reply_notice' ) );
-    
+     
     }
+    
     //  without this the intro reply would not show up. strange
     add_filter('bbp_show_lead_topic','__return_true');
+        
+    add_filter( 'bbp_get_topic_admin_links' , array( $this, 'topic_solve_link' ), 999, 3 );
+    add_action( 'bbp_toggle_topic_handler', array( $this, 'topic_solve' ), 10, 3 );
     
     if(get_option(self::TD.'limit_guest_access')){
       // If FV bbPress Settings->Limit guest access is checked
@@ -114,7 +119,7 @@ class bbPressModeration {
     add_filter( 'posts_results', array( $this, 'moderated_posts_remove' ) );
     add_filter( 'pre_get_posts', array( $this, 'moderated_posts_for_poster' ) );
     
-    add_filter( 'bbp_get_do_not_reply_address', array( $this, 'fix_forum_from_address') );
+    add_filter( 'bbp_get_do_not_reply_address', array( $this, 'fix_forum_from_addrestitles') );
   
     if( get_option('fv_bbpress_email') ) {
       $this->sEmail = get_option('fv_bbpress_email');
@@ -435,8 +440,7 @@ class bbPressModeration {
   * @param int $post_id - the post ID
   * @return string New title
   */
-  function title($title, $post_id) {
-  
+  function title($title, $post_id) {    
     $post = get_post( $post_id );
     if ($post && $post->post_status == 'pending') {
       return $title . ' ' . __('(Awaiting moderation)', self::TD);
@@ -1748,6 +1752,102 @@ HTML;
     }     
     return $content;
   }
+  
+  
+  
+  
+  function bbp_solve_topic_handler( $action = '' ) {
+    if ( empty( $_GET['topic_id'] ) )
+      return;
+    
+    // Setup possible get actions
+    $possible_actions = array(
+        'bbp_toggle_topic_solve'
+      );
+    
+    // Bail if actions aren't meant for this function
+    if ( !in_array( $action, $possible_actions ) )
+      return;
+    
+    $failure   = '';                         // Empty failure string
+    $view_all  = false;                      // Assume not viewing all
+    $topic_id  = (int) $_GET['topic_id'];    // What's the topic id?
+    $success   = false;                      // Flag
+    $post_data = array( 'ID' => $topic_id ); // Prelim array
+    $redirect  = '';                         // Empty redirect URL
+    
+    check_ajax_referer( 'solve-' . bbp_get_topic_post_type() . '_' . $topic_id );
+    
+    // Make sure topic exists
+    $topic = bbp_get_topic( $topic_id );
+    if ( empty( $topic ) )
+      return;
+    
+    // What is the user doing here?
+    if ( !current_user_can( 'moderate', $topic->ID ) ) {
+      bbp_add_error( 'bbp_solve_topic_permission', __( '<strong>ERROR:</strong> You do not have the permission to do that.', self::TD ) );
+      return;
+    }
+
+    if( get_post_meta( $topic_id, 'fv_bbp_solved', true) ){      
+      delete_post_meta( $topic_id, 'fv_bbp_solved', true );
+    } else {
+      add_post_meta( $topic_id, 'fv_bbp_solved', true );
+    }
+    
+    $success = true;
+    
+    // Do additional topic toggle actions
+    do_action( 'bbp_approve_topic_handler', $success, $post_data, $action );
+    
+    // No errors
+    if ( false !== $success && !is_wp_error( $success ) ) {
+    
+      // Get the redirect detination
+      $permalink = bbp_get_topic_permalink( $topic_id );
+      $redirect  = bbp_add_view_all( $permalink, $view_all );
+      
+      wp_safe_redirect( $redirect );
+      
+      // For good measure
+      exit();
+      
+      // Handle errors
+    } else {
+      if( is_wp_error( $success ) ) {
+        $failure .= " \n".$success->get_error_message();
+      }
+      bbp_add_error( 'bbp_solve_topic', $failure );
+    }    
+
+  }
+  
+
+  
+  
+  function topic_solve_link( $retval, $r, $args ){    
+    $topic = bbp_get_topic( bbp_get_topic_id( (int) $r['id'] ) );
+
+    if( empty( $topic ) || !current_user_can( 'moderate', $topic->ID ) ) return $retval;    
+    
+    $uri = add_query_arg( array( 'action' => 'bbp_toggle_topic_solve', 'topic_id' => $topic->ID ) );
+    $uri = wp_nonce_url( $uri, 'solve-topic_' . $topic->ID );
+    
+    if( get_post_meta( get_the_ID(),'fv_bbp_solved', true) ){      
+      $text = "Mark as unsolved";    
+    } else {
+      $text = "Mark as solved";
+    }
+    $link = $r['sep'].$r['link_before'] . '<a href="' . esc_url( $uri ) . '" class="bbp-topic-reply-link">' . $text . '</a>' . $r['link_after'];
+    
+    $retval = str_replace( $r['after'], $link.$r['after'], $retval );
+  
+    return $retval;
+  }
+  
+  
+  
+  
 }
 
 $bbpressmoderation = new bbPressModeration();
