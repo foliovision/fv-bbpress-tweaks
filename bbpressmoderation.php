@@ -157,7 +157,7 @@ class bbPressModeration {
   function cookie_get_ids() {
     if( $this->cookie ) {
       global $wpdb;
-      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type IN ( 'topic', 'reply' )" ); //fix by fvKajo from:
+      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type IN ( 'topic', 'reply' ) AND post_status != 'trash' " ); //fix by fvKajo from:
       //      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type = 'topic'" );
     } else {
       return false;

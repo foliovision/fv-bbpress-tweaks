@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FV bbPress Tweaks
  * Description: Improve your forum URL structure, allow guest posting and lot more
- * Version: 0.2.4.2.dev
+ * Version: 0.2.4.2.1dev
  * Author: Foliovision
  * Author URI: http://foliovision.com
  */
@@ -622,18 +622,7 @@ The %sitename% Team',
 
   private function fv_add_forum_participant( $aData ) {
     global $wpdb;
-/*
-$aData:
-  ["bbp_anonymous_name"]    => string(4) "kajo"
-  ["bbp_anonymous_email"]    => string(21) "kosar.karol@gmail.com"
-  ["bbp_anonymous_website"]  => string(0) ""
-*/
-    $strQueryUserLogins = "
-      select user_login
-      from {$wpdb->users}
-      ";
-
-    $aUserLogins = $wpdb->get_col( $strQueryUserLogins );
+    $aUserLogins = $wpdb->get_col( "SELECT LOWER(user_login) FROM {$wpdb->users}" );
 
     $aUserName = explode(' ', $aData["bbp_anonymous_name"], 2);
     $sFirstName = $aUserName[0];
@@ -681,8 +670,12 @@ $aData:
     unset( $GLOBALS['fv_bbpress_tweaks_'.$aData['bbp_anonymous_email']] );
     }
     */
-
+    
     $user_id = wp_insert_user( $aUserData );
+    if( is_wp_error( $user_id ) ) {      
+      return false;  
+    }
+    
     add_user_meta( $user_id, '_fv_user_imported', 'automatically imported forum participant from aData '.var_export( $aData, true ), true );
     add_user_meta( $user_id, '_fv_user_imported_p', 'fv'.$strGeneratedPW.'poiu', true );
 
@@ -712,7 +705,7 @@ $aData:
     }
 
     if( $send_welcome_email ){
-      $this->fv_send_mail_invite( $aData["bbp_anonymous_name"], $strGeneratedPW, $aData["bbp_anonymous_email"], $sFirstName, $sLastName, $bPending );
+      $this->fv_send_mail_invite( $g_login, $strGeneratedPW, $aData["bbp_anonymous_email"], $sFirstName, $sLastName, $bPending );
     }
     return $user_id;
   }
