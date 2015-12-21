@@ -27,7 +27,7 @@ if( !class_exists('bbPressModeration') ) {
   include( dirname(__FILE__).'/bbpressmoderation.php' );
 }
 
-
+if( 1>0 || isset($_GET['new_feature']) ) include( dirname(__FILE__).'/search-before-post.php' );
 
 
 register_activation_hook(__FILE__,'fv_bbpress_refresh_rules');
@@ -792,11 +792,12 @@ The %sitename% Team',
 
 
   function get_link_recursively($post,$link=''){
-    if($post->post_parent==0){
-      return $post->post_name.'/'.$link;
-    }else{
-      $link = $post->post_name.'/'.$link;
-      return $this->get_link_recursively($this->get_post_from_forums($post),$link);
+    if( $link ) $link = '/'.$link;
+    if( $post->post_parent == 0 ) {
+      return $post->post_name.$link;
+    } else {
+      $link = $post->post_name.$link;
+      return $this->get_link_recursively( $this->get_post_from_forums($post), $link );
     }
   }
 
@@ -819,24 +820,30 @@ The %sitename% Team',
 
   public function forum_post_type_link($link) {
     $args = func_get_args();
+    
     $post = $args[1];
+    $post = get_post($post->ID);  //  without this we get post_status = 'publish' for pending posts ?!?
 
     if( !$this->bEnabled || stripos($link,'/edit') !== false ) {
       return $link;
     }
 
     if( is_object($post) && $post->post_type == 'forum' && in_array( $post->post_status, array( 'publish', 'hidden' ) ) ) {
-      $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post)) );
+      $link = home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post));
     
-    }elseif( is_object($post) && $post->post_type == 'topic' /*&& in_array( $post->post_status, array( 'publish', 'pending' ) )*/ ) {
-      $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post)) );
+    } elseif( is_object($post) && $post->post_type == 'topic' /*&& in_array( $post->post_status, array( 'publish', 'pending' ) )*/ ) {
+      $link = home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post));
       //wp_cache_set( 'fv_bbpress_topic_link-'.$post->ID, $link, 'fv_bbpress' );
     
-    }elseif( is_object($post) && $post->post_type == 'reply' && in_array( $post->post_status, array( 'publish', 'pending' ) ) ) {
-      $link = user_trailingslashit( home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post) )); // todo : check links to replies
+    } elseif( is_object($post) && $post->post_type == 'reply' && in_array( $post->post_status, array( 'publish', 'pending' ) ) ) {
+      $link = home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post) );
+      if( $post->post_status == 'pending' && strlen($post->post_name) > 0 && !is_int($post->post_name) ) {  //  the pending replies somehow put the post name into the URL, so we need to strip that
+        $link = preg_replace( '~/'.$post->post_name.'(/?)$~', '$1', $link );
+      }      
     
     }
 
+    $link = user_trailingslashit($link);
     return $link;
   }
 
@@ -1167,4 +1174,52 @@ function fv_bbpress_solved( $post_id = false ){
   if( get_post_meta( $post_id,'fv_bbp_solved', true ) ) {      
     echo ' <span class="fv_bbpress_solved">[Solved]</span>';
   }    
-}  
+}
+
+
+//if( !isset($_GET['new_feature']) ) return;
+
+/*
+ *  Improve forum selection for new topics
+ */
+add_action( 'bbp_theme_before_topic_form_forum', 'fv_bbpress_ob_start' );
+
+function fv_bbpress_ob_start() {
+  ob_start();  
+}
+
+
+add_action( 'bbp_theme_after_topic_form_forum', 'fv_bbpress_ob_clean' );
+
+function fv_bbpress_ob_clean() {
+  ob_get_clean();
+}
+
+
+add_action( 'bbp_theme_before_topic_form_title', 'fv_bbpress_forum_picker' );
+
+function fv_bbpress_forum_picker() {
+  ?>
+  <p>
+    <label for="bbp_forum_id"><?php _e( 'Forum:', 'bbpress' ); ?></label><br />
+    <?php
+      $forum_id = bbp_is_single_forum() ? get_the_ID() : false;
+      bbp_dropdown( array(
+        'show_none' => __( '(Select plugin sub-forum)', 'bbpress' ),
+        'selected'  => $forum_id
+      ) );
+    ?>
+  </p>
+  <?php
+}
+
+
+/*
+ *  Allow guests to post to forum root
+ */
+
+add_filter( 'bbp_current_user_can_access_create_topic_form', 'fv_bbpress_guest_allow_root_posting' );
+
+function fv_bbpress_guest_allow_root_posting( $can ) {
+  return true;  //  todo: should check the guest posting option for sure!
+}
