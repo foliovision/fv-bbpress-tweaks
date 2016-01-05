@@ -135,6 +135,7 @@ class bbPressModeration {
   */
   function activate() {
     // Notify admin
+    add_option(self::TD . 'search_before_post', 0);
     add_option(self::TD . 'limit_guest_access', 0);
     add_option(self::TD . 'always_display', 1);
     add_option(self::TD . 'notify', 1);
@@ -1455,6 +1456,7 @@ class bbPressModeration {
   * Register our options
   */
   function admin_init() {
+    register_setting( self::TD.'option-group', self::TD.'search_before_post');
     register_setting( self::TD.'option-group', self::TD.'limit_guest_access');
     register_setting( self::TD.'option-group', self::TD.'always_display');
     register_setting( self::TD.'option-group', self::TD.'notify');
@@ -1486,9 +1488,17 @@ class bbPressModeration {
       
         <tr valign="top">
           <td>
-            <h3><?php _e('Privacy settings', self::TD); ?></h3>
+            <h3><?php _e('General settings', self::TD); ?></h3>
           </td>
         </tr>
+        
+        <tr valign="top">
+          <th scope="row"><?php _e('Search before posting', self::TD); ?></th>
+          <td>
+            <input type="checkbox" id="<?php echo self::TD; ?>search_before_post" name="<?php echo self::TD; ?>search_before_post" value="1" <?php echo (get_option(self::TD.'search_before_post', '') ? ' checked="checked" ' : ''); ?> />
+            <label for="<?php echo self::TD; ?>search_before_post"><?php _e('Posting new topic will show an Ajax-powered search form allowing your users to post to the existing topics rather than creating new ones', self::TD); ?></label>
+          </td>
+        </tr>        
         
         <tr valign="top">
           <th scope="row"><?php _e('Limit guest access', self::TD); ?></th>

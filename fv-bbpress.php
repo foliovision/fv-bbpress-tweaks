@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FV bbPress Tweaks
  * Description: Improve your forum URL structure, allow guest posting and lot more
- * Version: 0.2.4.2.1dev
+ * Version: 0.2.5dev
  * Author: Foliovision
  * Author URI: http://foliovision.com
  */
@@ -27,7 +27,7 @@ if( !class_exists('bbPressModeration') ) {
   include( dirname(__FILE__).'/bbpressmoderation.php' );
 }
 
-if( 1>0 || isset($_GET['new_feature']) ) include( dirname(__FILE__).'/search-before-post.php' );
+include( dirname(__FILE__).'/search-before-post.php' );
 
 
 register_activation_hook(__FILE__,'fv_bbpress_refresh_rules');
@@ -52,6 +52,14 @@ function fv_bbpress_permastruct() {
   }
 }
 
+
+add_action( 'save_post', 'fv_bbpress_new_forum_flush', 10, 3 );
+
+function fv_bbpress_new_forum_flush( $post_id, $post, $update ) {
+  if( $post->post_type == 'forum' ) {
+    add_option('fv_bbpress_rewrite_rules_flush', 'true');
+  }
+}
 
 
 
@@ -1179,47 +1187,3 @@ function fv_bbpress_solved( $post_id = false ){
 
 //if( !isset($_GET['new_feature']) ) return;
 
-/*
- *  Improve forum selection for new topics
- */
-add_action( 'bbp_theme_before_topic_form_forum', 'fv_bbpress_ob_start' );
-
-function fv_bbpress_ob_start() {
-  ob_start();  
-}
-
-
-add_action( 'bbp_theme_after_topic_form_forum', 'fv_bbpress_ob_clean' );
-
-function fv_bbpress_ob_clean() {
-  ob_get_clean();
-}
-
-
-add_action( 'bbp_theme_before_topic_form_title', 'fv_bbpress_forum_picker' );
-
-function fv_bbpress_forum_picker() {
-  ?>
-  <p>
-    <label for="bbp_forum_id"><?php _e( 'Forum:', 'bbpress' ); ?></label><br />
-    <?php
-      $forum_id = bbp_is_single_forum() ? get_the_ID() : false;
-      bbp_dropdown( array(
-        'show_none' => __( '(Select plugin sub-forum)', 'bbpress' ),
-        'selected'  => $forum_id
-      ) );
-    ?>
-  </p>
-  <?php
-}
-
-
-/*
- *  Allow guests to post to forum root
- */
-
-add_filter( 'bbp_current_user_can_access_create_topic_form', 'fv_bbpress_guest_allow_root_posting' );
-
-function fv_bbpress_guest_allow_root_posting( $can ) {
-  return true;  //  todo: should check the guest posting option for sure!
-}

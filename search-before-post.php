@@ -3,6 +3,8 @@
 add_action( 'bbp_theme_after_topic_form_submit_button', 'fv_search_before_post_script_enable' );
 
 function fv_search_before_post_script_enable() {
+  if( bbp_is_topic_edit() || get_option('bbpressmoderationsearch_before_post') == false ) return;
+  
   add_action( 'wp_footer', 'fv_search_before_post_script', 999 );
 }
 
@@ -100,5 +102,60 @@ function fv_search_before_post_script() {
 add_action( 'bbp_theme_after_topic_form_title', 'fv_search_before_post_messages' );
 
 function fv_search_before_post_messages() {
+  if( bbp_is_topic_edit() || get_option('bbpressmoderationsearch_before_post') == false ) return;
+  
   echo "<div id='fv_search_before_post_messages'></div>\n";
+}
+
+
+/*
+ *  Improve forum selection for new topics
+ */
+add_action( 'bbp_theme_before_topic_form_forum', 'fv_bbpress_ob_start' );
+
+function fv_bbpress_ob_start() {
+  if( bbp_is_topic_edit() || get_option('bbpressmoderationsearch_before_post') == false ) return;
+  
+  ob_start();  
+}
+
+
+add_action( 'bbp_theme_after_topic_form_forum', 'fv_bbpress_ob_clean' );
+
+function fv_bbpress_ob_clean() {
+  if( bbp_is_topic_edit() || get_option('bbpressmoderationsearch_before_post') == false ) return;
+  
+  ob_get_clean();
+}
+
+
+add_action( 'bbp_theme_before_topic_form_title', 'fv_bbpress_forum_picker' );
+
+function fv_bbpress_forum_picker() {
+  if( bbp_is_topic_edit() || get_option('bbpressmoderationsearch_before_post') == false ) return;  
+  ?>
+  <p>
+    <label for="bbp_forum_id"><?php _e( 'Forum:', 'bbpress' ); ?></label><br />
+    <?php
+      $forum_id = bbp_is_single_forum() ? get_the_ID() : false;
+      bbp_dropdown( array(
+        'show_none' => __( '(Select plugin sub-forum)', 'bbpress' ),
+        'selected'  => $forum_id
+      ) );
+    ?>
+  </p>
+  <?php
+}
+
+
+/*
+ *  Allow guests to post to forum root
+ */
+
+add_filter( 'bbp_current_user_can_access_create_topic_form', 'fv_bbpress_guest_allow_root_posting' );
+
+function fv_bbpress_guest_allow_root_posting( $can ) {
+  if( bbp_is_topic_edit() || get_option('bbpressmoderationsearch_before_post') == false ) return $can;
+  
+  return true;  //  todo: should check the guest posting option for sure!
 }
