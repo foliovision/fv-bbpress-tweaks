@@ -915,18 +915,18 @@ The %sitename% Team',
       foreach( $aRules AS $k => $v ) {
         
         $link = $this->get_link_recursively($objForum);  
-        $k = str_replace( '/topic/', '/'.$link, $k );
-        $k = str_replace( '/topic)/', ')/'.$link, $k ); //fvKajo 20150612
+        $k = str_replace( '/topic/', '/'.$link.'/', $k );
+        $k = str_replace( '/topic)/', ')/'.$link.'/', $k ); //fvKajo 20150612
         $aNewRules[$k] = $v;
     
         if( stripos($k, '/attachment/') === false && stripos($k, '([^/]+)/trackback/?$') !== false ) { //  todo: find a better way of adding this rule!
-      $aNewRules["forums/".$link."([^/]+)/edit/?$"] = 'index.php?' . bbp_get_topic_post_type()  . '=$matches[1]&' . bbp_get_edit_rewrite_id() . '=1';
+          $aNewRules["forums/".$link."([^/]+)/edit/?$"] = 'index.php?' . bbp_get_topic_post_type()  . '=$matches[1]&' . bbp_get_edit_rewrite_id() . '=1';
         }
         
-    }
+      }
 
     }
-    
+
     return $aNewRules;
   }
 
