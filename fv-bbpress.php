@@ -205,6 +205,8 @@ The %sitename% Team',
     add_action( 'bbp_theme_after_topic_admin_links', array( $this, 'enable' ) );
     add_action( 'bbp_theme_before_reply_admin_links', array( $this, 'disable' ) );
     add_action( 'bbp_theme_after_reply_admin_links', array( $this, 'enable' ) );
+    
+    add_filter( 'bbp_current_user_can_access_create_reply_form', array( $this, 'allow_user_to_reply_to_own_moderated_topics' ) );
   }
 
 
@@ -232,6 +234,20 @@ The %sitename% Team',
   function allow_notifications_for_pending_record_id( $reply_id ) {
     $aArgs = func_get_args();
     $this->idTopicJustPosted = $aArgs[1];
+  }
+  
+  
+  
+  
+  function allow_user_to_reply_to_own_moderated_topics($val) {
+    if( !is_user_logged_in() || !bbp_get_topic_id() ) return $val;
+    
+    $objTopic = get_post( bbp_get_topic_id() );
+    if( $objTopic->post_author == get_current_user_id() ) {
+      return true;
+    }
+    
+    return $val;
   }
   
   
