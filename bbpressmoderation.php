@@ -491,7 +491,9 @@ class bbPressModeration {
   
   function bbp_reply_admin_links( $args, $id ) {
     
-    unset($args['spam']);    
+    unset($args['spam']);
+    
+    if( !bbp_allow_threaded_replies() ) unset($args['reply']);
     
     $reply_status = bbp_get_reply_status( $id );
     if( !get_option(self::TD . 'put_in_front_end_moderation_links') || "pending" !== $reply_status || !current_user_can('moderate') ) {
@@ -513,7 +515,9 @@ class bbPressModeration {
   function bbp_topic_admin_links( $args, $id ) {
     
     unset($args['stick']);
-    unset($args['spam']);        
+    unset($args['spam']);
+    
+    if( !bbp_allow_threaded_replies() ) unset($args['reply']);
     
     $topic_status = bbp_get_topic_status( $id );
     if( !get_option(self::TD . 'put_in_front_end_moderation_links') || "pending" !== $topic_status || !current_user_can('moderate') ) {
