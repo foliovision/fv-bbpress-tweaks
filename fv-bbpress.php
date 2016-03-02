@@ -1203,3 +1203,12 @@ function fv_bbpress_solved( $post_id = false ){
 
 //if( !isset($_GET['new_feature']) ) return;
 
+add_filter( 'get_avatar', 'fv_bbpress_get_avatar', 999, 3 );
+
+function fv_bbpress_get_avatar( $avatar, $id_or_email, $size ) {
+  if( is_bbpress() && $size == 14 ) {
+    return false;
+  }
+  
+  return $avatar;
+}
