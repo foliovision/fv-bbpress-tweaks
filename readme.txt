@@ -20,6 +20,12 @@ Here is a short description of the plugin.  This should be no more than 150 char
 
 == Changelog ==
 
+= 0.2.6 =
+
+* Closed topics now open properly
+* Support for original forum/topic URLs fixed
+* Removing annyoing little gravatars
+
 = 0.2.4.1 =
 
 * Removing core "Stick (To Front)" and "Spam" topic and reply moderation links.

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FV bbPress Tweaks
  * Description: Improve your forum URL structure, allow guest posting and lot more
- * Version: 0.2.5dev
+ * Version: 0.2.6dev
  * Author: Foliovision
  * Author URI: http://foliovision.com
  */
@@ -592,7 +592,7 @@ The %sitename% Team',
       unset( $GLOBALS['fv_bbpress_tweaks_'.$anonymous_data['bbp_anonymous_email']] );
     }
     if( false !== $anonymous_data && 0 !== $topic_author ) {
-    $this->fv_fix_new_topicorreply( $topic_author, $topic_id, $anonymous_data["bbp_anonymous_website"] );
+      $this->fv_fix_new_topicorreply( $topic_author, $topic_id, $anonymous_data["bbp_anonymous_website"] );
     }
     //    add_option('fv_bbpress_rewrite_rules_flush', 'true');
     //    var_dump( $anonymous_data, $topic_author );die('poiu');
@@ -894,6 +894,8 @@ The %sitename% Team',
   
     }
     
+    $aNewRules = array_merge( $aRules, $aNewRules );
+    
     return $aNewRules;
   }
 
@@ -942,6 +944,8 @@ The %sitename% Team',
       }
 
     }
+
+    $aNewRules = array_merge( $aRules, $aNewRules );
 
     return $aNewRules;
   }

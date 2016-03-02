@@ -95,8 +95,7 @@ class bbPressModeration {
     //  without this the intro reply would not show up. strange
     add_filter('bbp_show_lead_topic','__return_true');
         
-    add_filter( 'bbp_get_topic_admin_links' , array( $this, 'topic_solve_link' ), 999, 3 );
-    add_action( 'bbp_toggle_topic_handler', array( $this, 'topic_solve' ), 10, 3 );
+    add_filter( 'bbp_get_topic_admin_links' , array( $this, 'topic_solve_link' ), 999, 3 );    
     
     if(get_option(self::TD.'limit_guest_access')){
       // If FV bbPress Settings->Limit guest access is checked
@@ -221,13 +220,13 @@ class bbPressModeration {
     
     if( (isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' ) ) && ( $this->cookie || is_user_logged_in() )  ) {
       if( !( current_user_can('moderate_comments') && isset($_GET['view']) && $_GET['view'] == 'all' ) ) {        
-        $query->query_vars['post_status'] = 'publish,pending';
+        $query->query_vars['post_status'] = 'publish,closed,pending';
       }
     }
     
     
     if( isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' ) && isset($query->query['edit']) && $query->query['edit'] == 1 ) {
-      $query->query_vars['post_status'] = 'publish,pending';
+      $query->query_vars['post_status'] = 'publish,closed,pending';
       /*$query->query['name'] = $query->query['name'];
       $query->query_vars['name'] = $query->query['name'];
       unset($query->query['reply']);
@@ -775,7 +774,7 @@ class bbPressModeration {
   
   public function handle_row_actions_approve_topic_notice() {
     
-    //if ( $this->bail() ) return;
+    if( is_admin() ) return;
     
     // Only proceed if GET is a topic toggle action
     if ( function_exists('bbp_is_get_request') && bbp_is_get_request() && !empty( $_GET['topic_id'] ) ) {
@@ -1861,7 +1860,7 @@ HTML;
     } else {
       $text = "Mark as solved";
     }
-    $link = $r['sep'].$r['link_before'] . '<a href="' . esc_url( $uri ) . '" class="bbp-topic-reply-link">' . $text . '</a>' . $r['link_after'];
+    $link = $r['sep'].( !empty($r['link_before']) ? $r['link_before'] : '' ) . '<a href="' . esc_url( $uri ) . '" class="bbp-topic-reply-link">' . $text . '</a>' . ( !empty($r['link_after']) ? $r['link_after'] : '' );
     
     $retval = str_replace( $r['after'], $link.$r['after'], $retval );
   
