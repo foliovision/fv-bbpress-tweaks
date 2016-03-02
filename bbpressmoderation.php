@@ -119,7 +119,7 @@ class bbPressModeration {
     add_filter( 'posts_results', array( $this, 'moderated_posts_remove' ) );
     add_filter( 'pre_get_posts', array( $this, 'moderated_posts_for_poster' ) );
     
-    add_filter( 'bbp_get_do_not_reply_address', array( $this, 'fix_forum_from_addrestitles') );
+    add_filter( 'bbp_get_do_not_reply_address', array( $this, 'fix_forum_from_address') );
   
     if( get_option('fv_bbpress_email') ) {
       $this->sEmail = get_option('fv_bbpress_email');
