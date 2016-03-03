@@ -109,6 +109,8 @@ class bbPressModeration {
       add_filter('bbp_get_topic_author_avatar',array( $this,'empty_avatar') );
       add_action( 'bbp_theme_before_topic_started_by',array( $this, 'fv_bbpress_tweaks_forum_remove_started_by_before') );
       add_action( 'bbp_theme_after_topic_started_by',array( $this, 'fv_bbpress_tweaks_forum_remove_started_by_after') );
+      add_action( 'bbp_get_reply_revision_log', '__return_false' );
+      add_action( 'bbp_get_topic_revision_log', '__return_false' );
     }
     
     add_action( 'init', array( $this, 'cookie_check' ) );
