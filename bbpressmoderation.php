@@ -137,6 +137,7 @@ class bbPressModeration {
   function activate() {
     // Notify admin
     add_option(self::TD . 'search_before_post', 0);
+    add_option(self::TD . 'notify_by_default', 0);
     add_option(self::TD . 'limit_guest_access', 0);
     add_option(self::TD . 'always_display', 1);
     add_option(self::TD . 'notify', 1);
@@ -1462,6 +1463,7 @@ class bbPressModeration {
   */
   function admin_init() {
     register_setting( self::TD.'option-group', self::TD.'search_before_post');
+    register_setting( self::TD.'option-group', self::TD.'notify_by_default');
     register_setting( self::TD.'option-group', self::TD.'limit_guest_access');
     register_setting( self::TD.'option-group', self::TD.'always_display');
     register_setting( self::TD.'option-group', self::TD.'notify');
@@ -1498,21 +1500,29 @@ class bbPressModeration {
         </tr>
         
         <tr valign="top">
-          <th scope="row"><?php _e('Search before posting', self::TD); ?></th>
-          <td>
-            <input type="checkbox" id="<?php echo self::TD; ?>search_before_post" name="<?php echo self::TD; ?>search_before_post" value="1" <?php echo (get_option(self::TD.'search_before_post', '') ? ' checked="checked" ' : ''); ?> />
-            <label for="<?php echo self::TD; ?>search_before_post"><?php _e('Posting new topic will show an Ajax-powered search form allowing your users to post to the existing topics rather than creating new ones', self::TD); ?></label>
-          </td>
-        </tr>        
-        
-        <tr valign="top">
           <th scope="row"><?php _e('Limit guest access', self::TD); ?></th>
           <td>
             <input type="checkbox" id="<?php echo self::TD; ?>limit_guest_access" name="<?php echo self::TD; ?>limit_guest_access" value="1" <?php echo (get_option(self::TD.'limit_guest_access', '') ? ' checked="checked" ' : ''); ?> />
             <label for="<?php echo self::TD; ?>limit_guest_access"><?php _e('Limit guest users to first couple of sentences of each forum topic only, hide user names and avatars (Google will index your forums, good for SEO)', self::TD); ?></label>
           </td>
+        </tr>        
+        
+        <tr valign="top">
+          <th scope="row"><?php _e('Notify of follow-up replies by default', self::TD); ?></th>
+          <td>
+            <input type="checkbox" id="<?php echo self::TD; ?>notify_by_default" name="<?php echo self::TD; ?>notify_by_default" value="1" <?php echo (get_option(self::TD.'notify_by_default', '') ? ' checked="checked" ' : ''); ?> />
+            <label for="<?php echo self::TD; ?>notify_by_default"><?php _e('Checks the "Notify me of follow-up replies via email" checkbox for non-admin users by default', self::TD); ?></label>
+          </td>
         </tr>
         
+        <tr valign="top">
+          <th scope="row"><?php _e('Search before posting', self::TD); ?></th>
+          <td>
+            <input type="checkbox" id="<?php echo self::TD; ?>search_before_post" name="<?php echo self::TD; ?>search_before_post" value="1" <?php echo (get_option(self::TD.'search_before_post', '') ? ' checked="checked" ' : ''); ?> />
+            <label for="<?php echo self::TD; ?>search_before_post"><?php _e('Posting new topic will show an Ajax-powered search form allowing your users to post to the existing topics rather than creating new ones', self::TD); ?></label>
+          </td>
+        </tr>         
+
         <tr valign="top">
           <td>
             <h3><?php _e('Moderation settings', self::TD); ?></h3>
@@ -1757,6 +1767,10 @@ HTML;
   }
   
   function fv_bbpress_tweaks_auto_subscribe( $checked, $topic_subscribed  ) {
+    if( !get_option('bbpressmoderationnotify_by_default') ) {
+      return $checked;
+    }
+    
     global $current_user;
     get_currentuserinfo();
     
