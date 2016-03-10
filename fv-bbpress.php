@@ -1216,3 +1216,14 @@ function fv_bbpress_get_avatar( $avatar, $id_or_email, $size ) {
   
   return $avatar;
 }
+
+
+
+
+add_action( 'bbp_ready',  'fv_bbpress_dont_setup_akismet',    0  );
+
+function fv_bbpress_dont_setup_akismet() {
+  if( is_user_logged_in() ) {
+    remove_action( 'bbp_ready',  'bbp_setup_akismet',    2  );
+  }
+}
