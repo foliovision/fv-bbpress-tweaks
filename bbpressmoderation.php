@@ -1710,6 +1710,8 @@ class bbPressModeration {
   //  make sure guests don't see person's gravatar
   //add_filter( 'get_avatar', 'fv_bbpress_tweaks_get_avatar', 10, 6 );
   function fv_bbpress_tweaks_get_avatar( $avatar ) {
+    if( !function_exists('bbp_is_forum_archive') ) return $avatar;
+    
     if( ( bbp_is_forum_archive() || bbp_is_topic_archive() || bbp_is_single_forum() || bbp_is_single_topic() || bbp_is_single_reply() ) && !$this->fv_bbpress_tweaks_membership_user() ) {
       $aArgs = func_get_args();
       
