@@ -44,9 +44,20 @@ function fv_bbpress_deactivate() {
 
 
 // Remove category base
-add_action('init', 'fv_bbpress_permastruct');
+add_action('init', 'fv_bbpress_permastruct',999999);
 function fv_bbpress_permastruct() {
-  if (get_option('fv_bbpress_rewrite_rules_flush') == 'true') {
+  $bFound = false;
+  $aRules = get_option('rewrite_rules');
+  if( $aRules && count($aRules) > 0 ) {
+    foreach( $aRules AS $key => $value ) {
+      if( $key == 'fv-bbpress-tweaks-detector-235hnguh9hq46j0909iasn0zzdfsAJ' ) {
+        $bFound = true;
+        break;
+      }
+    }
+  }	
+	
+  if( !$bFound || get_option('fv_bbpress_rewrite_rules_flush') == 'true') {
     flush_rewrite_rules();
     delete_option('fv_bbpress_rewrite_rules_flush');
   }
@@ -893,6 +904,8 @@ The %sitename% Team',
       }
   
     }
+    
+    $aNewRules['fv-bbpress-tweaks-detector-235hnguh9hq46j0909iasn0zzdfsAJ'] = 'index.php?fv-bbpress-tweaks-detector-235hnguh9hq46j0909iasn0zzdfsAJ=1';
     
     $aNewRules = array_merge( $aRules, $aNewRules );
     
