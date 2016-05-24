@@ -2,23 +2,44 @@
 Contributors: FolioVision
 Tags: comments, spam
 Requires at least: 3.0.1
-Tested up to: 3.4
+Tested up to: 3.5.1
 Stable tag: 4.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Here is a short description of the plugin.  This should be no more than 150 characters.  No markup here.
+Adds moderation and pretty URL structure to your bbPress forums.
 
 == Description ==
 
+Features:
+
+* Guest posting - any forum posts posted with a known email address get associated to the WP user, any posts with a new email address get a new user account. Enable in Tools -> FV BBPress Tweaks.
+* Forum moderation - any new forum posts or topics get into moderation. Only admins and the original posters can see the pending posts. Enable in Settings -> FV bbPress Tweaks.
+* Nicer permalinks - get rid of /support/topic/{topic-slug} /support/forum/{forum-name} and start using hierarchical /support/{forum-name}/{sub-forum-name}/{topic-slug} structure!
+
+Known bugs:
+
+* You can open the topic editing from front-end for pending topics
+* When you delete a reply, the pending replies no longer appear, just open the topic again with its original URL
 
 == Installation ==
 
+The plugin installs just like any other WordPress plugin. Check Tools -> FV BBPress Tweaks and Settings -> FV bbPress Tweaks.
 
 == Screenshots ==
 
+No screenshots yet.
 
 == Changelog ==
+
+= 0.2.7 =
+
+* First public release
+* Akismet - disabling for logged in users
+* Fix when bbPress is inactive
+* Fix for rewrite rules going wrong
+* Hiding reply and topic edit log for guests
+* Setting to check "Notify me of follow-up replies via email" by default
 
 = 0.2.6 =
 
