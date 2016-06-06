@@ -40,6 +40,7 @@ No screenshots yet.
 * Fix for rewrite rules going wrong
 * Hiding reply and topic edit log for guests
 * Setting to check "Notify me of follow-up replies via email" by default
+* Fixed avatars URLs for not logged in users
 
 = 0.2.6 =
 
