@@ -1505,7 +1505,7 @@ class bbPressModeration {
             <input type="checkbox" id="<?php echo self::TD; ?>limit_guest_access" name="<?php echo self::TD; ?>limit_guest_access" value="1" <?php echo (get_option(self::TD.'limit_guest_access', '') ? ' checked="checked" ' : ''); ?> />
             <label for="<?php echo self::TD; ?>limit_guest_access"><?php _e('Limit guest users to first couple of sentences of each forum topic only, hide user names and avatars (Google will index your forums, good for SEO)', self::TD); ?></label>
           </td>
-        </tr>        
+        </tr>
         
         <tr valign="top">
           <th scope="row"><?php _e('Notify of follow-up replies by default', self::TD); ?></th>
@@ -1707,6 +1707,14 @@ class bbPressModeration {
     return $content;
   }
   
+  //get double sized gravatar image
+  function fv_bbpress_tweaks_get_avatar_doublesize( $size ){
+    if( ! intval($size[1]) )
+      return $size[0];
+    else
+      return "s=".intval($size[1])*2;
+  }
+
   //  make sure guests don't see person's gravatar
   //add_filter( 'get_avatar', 'fv_bbpress_tweaks_get_avatar', 10, 6 );
   function fv_bbpress_tweaks_get_avatar( $avatar ) {
@@ -1714,20 +1722,23 @@ class bbPressModeration {
     
     if( ( bbp_is_forum_archive() || bbp_is_topic_archive() || bbp_is_single_forum() || bbp_is_single_topic() || bbp_is_single_reply() ) && !$this->fv_bbpress_tweaks_membership_user() ) {
       $aArgs = func_get_args();
-      
+
+      $url = $aArgs[3];
+      $url2x = preg_replace_callback( '~s=([0-9]+)$~', array( $this, 'fv_bbpress_tweaks_get_avatar_doublesize' ), $url );
+
       // copy from wp-includes/pluggable.php
       $avatar = sprintf(
           "<img alt='%s' src='%s' srcset='%s' class='%s' height='%d' width='%d' %s/>",
           esc_attr( $aArgs[4] ),
-          esc_url( get_option('avatar_default') ),
-          esc_attr( get_option('avatar_default')." 2x" ),
+          $url,
+          esc_attr( $url2x." 2x" ),
           esc_attr( join( ' ', array( 'avatar', 'avatar-' . (int) $aArgs[2], 'photo' ) ) ),
           (int) $aArgs[5]['height'],
           (int) $aArgs[5]['width'],
           $args['extra_attr']
         );
     
-    }  
+    }
     
     return $avatar;
   }
