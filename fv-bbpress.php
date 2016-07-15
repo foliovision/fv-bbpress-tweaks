@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FV bbPress Tweaks
  * Description: Improve your forum URL structure, allow guest posting and lot more
- * Version: 0.2.7
+ * Version: 0.2.7.1
  * Author: Foliovision
  * Author URI: http://foliovision.com
  */
@@ -192,9 +192,9 @@ The %sitename% Team',
     /* NOTE: added this:
     add_filter( 'cptp_excluded_post_types', function($aExcludedPostTypes) { return array('forum','topic','reply'); } );
     into functions.php and changed the code in plugins/custom-post-type-permalinks/CPTP/Util.php -> get_post_types()*/
-    add_filter( 'topic_rewrite_rules', array( $this, 'topic_rewrite_rules' ), 100000 ); //fvKajo 20150612
-    add_filter( 'forum_rewrite_rules', array( $this, 'forum_rewrite_rules' ), 100000 ); //fvKajo 20150612
-    add_filter( 'post_type_link', array( $this, 'forum_post_type_link' ), 100000, 4); //fvKajo 20150612
+    add_filter( 'topic_rewrite_rules', array( $this, 'topic_rewrite_rules' ), 100000 );
+    add_filter( 'forum_rewrite_rules', array( $this, 'forum_rewrite_rules' ), 100000 );
+    add_filter( 'post_type_link', array( $this, 'forum_post_type_link' ), 100000, 4);
 
     if( $this->options['participant_importing'] ) {
       add_filter('bbp_new_topic_pre_insert', array($this, 'pre_insert'), 2);  // 2 because of bbPress Akismet module
@@ -871,12 +871,19 @@ The %sitename% Team',
       //wp_cache_set( 'fv_bbpress_topic_link-'.$post->ID, $link, 'fv_bbpress' );
     
     } elseif( is_object($post) && $post->post_type == 'reply' && in_array( $post->post_status, array( 'publish', 'pending' ) ) ) {
-      $link = home_url(bbp_get_root_slug().'/'.$this->get_link_recursively($post) );
-      if( $post->post_status == 'pending' && strlen($post->post_name) > 0 && !is_int($post->post_name) ) {  //  the pending replies somehow put the post name into the URL, so we need to strip that
+      $link = home_url(bbp_get_root_slug().'/'.$this->get_link_recursively( get_post($post->post_parent) ) ); //.'#post-'.$post->ID;
+      /*if( $post->post_status == 'pending' && strlen($post->post_name) > 0 && !is_int($post->post_name) ) {  //  the pending replies somehow put the post name into the URL, so we need to strip that
         $link = preg_replace( '~/'.$post->post_name.'(/?)$~', '$1', $link );
-      }      
+      }  */    
     
+      if( isset($_GET['martinv1']) ) {
+        echo 'forum_post_type_link reply '.$link."\n";
+        var_dump($link);
+        die();
+      }        
     }
+    
+
 
     $link = user_trailingslashit($link);
     return $link;

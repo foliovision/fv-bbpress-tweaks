@@ -222,8 +222,11 @@ class bbPressModeration {
     if( is_admin() ) return;
     
     if( (isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' ) ) && ( $this->cookie || is_user_logged_in() )  ) {
-      if( !( current_user_can('moderate_comments') && isset($_GET['view']) && $_GET['view'] == 'all' ) ) {        
-        $query->query_vars['post_status'] = 'publish,closed,pending';
+      if( is_array($query->query_vars['post_status']) ) {
+        $query->query_vars['post_status'][] = 'pending';
+        $query->query_vars['post_status'][] = 'closed';
+      } else if( strlen($query->query_vars['post_status']) ) {
+        $query->query_vars['post_status'] .= ',closed,pending';
       }
     }
     

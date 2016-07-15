@@ -32,6 +32,11 @@ No screenshots yet.
 
 == Changelog ==
 
+= 0.2.8 =
+
+* Fix for showing pending replies in topic view after some reply was deleted (?view=all)
+* Partial fix for redirection from ?p={reply id}
+
 = 0.2.7 =
 
 * First public release
