@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FV bbPress Tweaks
  * Description: Improve your forum URL structure, allow guest posting and lot more
- * Version: 0.2.7.1
+ * Version: 0.2.7.2
  * Author: Foliovision
  * Author URI: http://foliovision.com
  */
@@ -22,6 +22,17 @@ UM issues/tasks:
 + UM user accounts with the same firstname.lastname are not differenciated: solved by appending number to Last name
 - UM doesn't give me the option to assign all posts to a specific user when deleting - just uses ID = 1
 */
+
+if( ! function_exists('is_bbpress') ):
+  // bbPress is turned off display warning
+
+  function fv_bbpress_tweaks_warning_bboff() {
+    printf( '<div class="notice notice-error"><p><strong>bbPress</strong> plugin is not installed or it is turned off. Please enable it before using <strong>FV bbPress Tweaks</strong>.</p></div>', $class, $message );
+  }
+
+  add_action( 'admin_notices', 'fv_bbpress_tweaks_warning_bboff' );
+
+else:
 
 if( !class_exists('bbPressModeration') ) {
   include( dirname(__FILE__).'/bbpressmoderation.php' );
@@ -1221,7 +1232,7 @@ function fv_bbpress_solved( $post_id = false ){
   if( !$post_id ) $post_id = get_the_ID();    
   if( get_post_meta( $post_id,'fv_bbp_solved', true ) ) {      
     echo ' <span class="fv_bbpress_solved">[Solved]</span>';
-  }    
+  }
 }
 
 
@@ -1247,3 +1258,5 @@ function fv_bbpress_dont_setup_akismet() {
     remove_action( 'bbp_ready',  'bbp_setup_akismet',    2  );
   }
 }
+
+endif;
