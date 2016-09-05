@@ -140,11 +140,16 @@ function fv_bbpress_forum_picker() {
       $forum_id = bbp_is_single_forum() ? get_the_ID() : false;
       bbp_dropdown( array(
         'show_none' => __( '(Select plugin sub-forum)', 'bbpress' ),
-        'selected'  => $forum_id
+        'selected'  => $forum_id,
+        'select_id' => 'fv_bbp_forum_id'
       ) );
     ?>
   </p>
   <?php
+}
+
+if( isset($_POST['fv_bbp_forum_id']) && intval($_POST['fv_bbp_forum_id']) > 0 ) {
+  $_POST['bbp_forum_id'] = intval($_POST['fv_bbp_forum_id']);
 }
 
 

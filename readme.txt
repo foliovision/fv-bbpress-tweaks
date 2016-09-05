@@ -32,6 +32,12 @@ No screenshots yet.
 
 == Changelog ==
 
+= 0.2.8 =
+
+* Fix for showing pending replies in topic view after some reply was deleted (?view=all)
+* Partial fix for redirection from ?p={reply id}
+* Adding notification and fixing error when bbPress plugin is turned off
+
 = 0.2.7 =
 
 * First public release
@@ -40,6 +46,7 @@ No screenshots yet.
 * Fix for rewrite rules going wrong
 * Hiding reply and topic edit log for guests
 * Setting to check "Notify me of follow-up replies via email" by default
+* Fixed avatars URLs for not logged in users
 
 = 0.2.6 =
 

@@ -117,7 +117,7 @@ class bbPressModeration {
     
     add_filter( 'bbp_current_user_can_access_create_reply_form', array( $this, 'moderated_posts_allow_reply' ) );
     //add_filter( 'post_type_link', array( $this, 'post_type_link' ), 11, 4 );  //  fix for broken reply editing
-    add_filter( 'posts_results', array( $this, 'moderated_posts_remove' ) );
+    add_filter( 'posts_results', array( $this, 'moderated_posts_remove' ), 0 );
     add_filter( 'pre_get_posts', array( $this, 'moderated_posts_for_poster' ) );
     
     add_filter( 'bbp_get_do_not_reply_address', array( $this, 'fix_forum_from_address') );
@@ -158,10 +158,12 @@ class bbPressModeration {
   }
   
   function cookie_get_ids() {
+    global $wpdb;
     if( $this->cookie ) {
-      global $wpdb;
       return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type IN ( 'topic', 'reply' ) AND post_status != 'trash' " ); //fix by fvKajo from:
       //      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type = 'topic'" );
+    } else if( !current_user_can('moderate') && get_current_user_id() > 0 ) {
+      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts WHERE post_author = ".intval(get_current_user_id())." AND post_type IN ( 'topic', 'reply' ) AND post_status != 'trash' " );
     } else {
       return false;
     }
@@ -222,7 +224,12 @@ class bbPressModeration {
     if( is_admin() ) return;
     
     if( (isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' ) ) && ( $this->cookie || is_user_logged_in() )  ) {
-      if( !( current_user_can('moderate_comments') && isset($_GET['view']) && $_GET['view'] == 'all' ) ) {        
+      if( is_array($query->query_vars['post_status']) ) {
+        $query->query_vars['post_status'][] = 'pending';
+        $query->query_vars['post_status'][] = 'closed';
+      } else if( strlen($query->query_vars['post_status']) ) {
+        $query->query_vars['post_status'] .= ',closed,pending';
+      } else if( !current_user_can('moderate_comments') && !isset($query->query_vars['post_status']) ) {
         $query->query_vars['post_status'] = 'publish,closed,pending';
       }
     }
@@ -1505,7 +1512,7 @@ class bbPressModeration {
             <input type="checkbox" id="<?php echo self::TD; ?>limit_guest_access" name="<?php echo self::TD; ?>limit_guest_access" value="1" <?php echo (get_option(self::TD.'limit_guest_access', '') ? ' checked="checked" ' : ''); ?> />
             <label for="<?php echo self::TD; ?>limit_guest_access"><?php _e('Limit guest users to first couple of sentences of each forum topic only, hide user names and avatars (Google will index your forums, good for SEO)', self::TD); ?></label>
           </td>
-        </tr>        
+        </tr>
         
         <tr valign="top">
           <th scope="row"><?php _e('Notify of follow-up replies by default', self::TD); ?></th>
@@ -1707,6 +1714,14 @@ class bbPressModeration {
     return $content;
   }
   
+  //get double sized gravatar image
+  function fv_bbpress_tweaks_get_avatar_doublesize( $size ){
+    if( ! intval($size[1]) )
+      return $size[0];
+    else
+      return "s=".intval($size[1])*2;
+  }
+
   //  make sure guests don't see person's gravatar
   //add_filter( 'get_avatar', 'fv_bbpress_tweaks_get_avatar', 10, 6 );
   function fv_bbpress_tweaks_get_avatar( $avatar ) {
@@ -1714,20 +1729,23 @@ class bbPressModeration {
     
     if( ( bbp_is_forum_archive() || bbp_is_topic_archive() || bbp_is_single_forum() || bbp_is_single_topic() || bbp_is_single_reply() ) && !$this->fv_bbpress_tweaks_membership_user() ) {
       $aArgs = func_get_args();
-      
+
+      $url = $aArgs[3];
+      $url2x = preg_replace_callback( '~s=([0-9]+)$~', array( $this, 'fv_bbpress_tweaks_get_avatar_doublesize' ), $url );
+
       // copy from wp-includes/pluggable.php
       $avatar = sprintf(
           "<img alt='%s' src='%s' srcset='%s' class='%s' height='%d' width='%d' %s/>",
           esc_attr( $aArgs[4] ),
-          esc_url( get_option('avatar_default') ),
-          esc_attr( get_option('avatar_default')." 2x" ),
+          $url,
+          esc_attr( $url2x." 2x" ),
           esc_attr( join( ' ', array( 'avatar', 'avatar-' . (int) $aArgs[2], 'photo' ) ) ),
           (int) $aArgs[5]['height'],
           (int) $aArgs[5]['width'],
           $args['extra_attr']
         );
     
-    }  
+    }
     
     return $avatar;
   }
