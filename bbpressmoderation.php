@@ -117,7 +117,7 @@ class bbPressModeration {
     
     add_filter( 'bbp_current_user_can_access_create_reply_form', array( $this, 'moderated_posts_allow_reply' ) );
     //add_filter( 'post_type_link', array( $this, 'post_type_link' ), 11, 4 );  //  fix for broken reply editing
-    add_filter( 'posts_results', array( $this, 'moderated_posts_remove' ) );
+    add_filter( 'posts_results', array( $this, 'moderated_posts_remove' ), 0 );
     add_filter( 'pre_get_posts', array( $this, 'moderated_posts_for_poster' ) );
     
     add_filter( 'bbp_get_do_not_reply_address', array( $this, 'fix_forum_from_address') );
@@ -158,10 +158,12 @@ class bbPressModeration {
   }
   
   function cookie_get_ids() {
+    global $wpdb;
     if( $this->cookie ) {
-      global $wpdb;
       return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type IN ( 'topic', 'reply' ) AND post_status != 'trash' " ); //fix by fvKajo from:
       //      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type = 'topic'" );
+    } else if( !current_user_can('moderate') && get_current_user_id() > 0 ) {
+      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts WHERE post_author = ".intval(get_current_user_id())." AND post_type IN ( 'topic', 'reply' ) AND post_status != 'trash' " );
     } else {
       return false;
     }
@@ -227,6 +229,8 @@ class bbPressModeration {
         $query->query_vars['post_status'][] = 'closed';
       } else if( strlen($query->query_vars['post_status']) ) {
         $query->query_vars['post_status'] .= ',closed,pending';
+      } else if( !current_user_can('moderate_comments') && !isset($query->query_vars['post_status']) ) {
+        $query->query_vars['post_status'] = 'publish,closed,pending';
       }
     }
     
