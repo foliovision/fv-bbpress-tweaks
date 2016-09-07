@@ -229,10 +229,18 @@ The %sitename% Team',
     add_action( 'bbp_theme_after_reply_admin_links', array( $this, 'enable' ) );
     
     add_filter( 'bbp_current_user_can_access_create_reply_form', array( $this, 'allow_user_to_reply_to_own_moderated_topics' ) );
+    add_filter('bbp_subscription_mail_message', array( $this, 'bbp_subscription_mail_message' ),10,3 );
   }
 
 
+  function bbp_subscription_mail_message($message, $reply_id, $topic_id){
+    $search = "You are receiving this email because you subscribed to a forum topic.";
+    $replace = "This email is just a notification. Please open the forum thread and reply there.";   
+    $message = str_replace($search, $replace, $message);
+    //@file_put_contents( ABSPATH.'bbpress-msg.log', "================\n\n\n\n$message\n\n\n\n", FILE_APPEND );
 
+    return $message;
+  }
 
   function admin_menu(){
     add_management_page( 'FV BBPress Tweaks', 'FV BBPress Tweaks', 'manage_options', 'fv-bbpress-tweaks', array($this, 'options_panel') );
