@@ -234,8 +234,10 @@ The %sitename% Team',
 
 
   function bbp_subscription_mail_message($message, $reply_id, $topic_id){
-    $message = "This email is just a notification. Please open the forum thread and reply there.\n".$message;
-    @file_put_contents( ABSPATH.'bbpress-msg.log', "================\n\n\n\n$message\n\n\n\n", FILE_APPEND );
+    $search = "You are receiving this email because you subscribed to a forum topic.";
+    $replace = "This email is just a notification. Please open the forum thread and reply there.";   
+    $message = str_replace($search, $replace, $message);
+    //@file_put_contents( ABSPATH.'bbpress-msg.log', "================\n\n\n\n$message\n\n\n\n", FILE_APPEND );
 
     return $message;
   }
