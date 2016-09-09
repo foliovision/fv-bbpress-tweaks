@@ -30,6 +30,8 @@ class bbPressModeration {
   
   var $sEmail = false;
   
+  var $aHidden = array();
+  
   /**
   * Construct
   * 
@@ -117,7 +119,7 @@ class bbPressModeration {
     
     add_filter( 'bbp_current_user_can_access_create_reply_form', array( $this, 'moderated_posts_allow_reply' ) );
     //add_filter( 'post_type_link', array( $this, 'post_type_link' ), 11, 4 );  //  fix for broken reply editing
-    add_filter( 'posts_results', array( $this, 'moderated_posts_remove' ), 0 );
+    
     add_filter( 'pre_get_posts', array( $this, 'moderated_posts_for_poster' ) );
     
     add_filter( 'bbp_get_do_not_reply_address', array( $this, 'fix_forum_from_address') );
@@ -157,18 +159,6 @@ class bbPressModeration {
     }
   }
   
-  function cookie_get_ids() {
-    global $wpdb;
-    if( $this->cookie ) {
-      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type IN ( 'topic', 'reply' ) AND post_status != 'trash' " ); //fix by fvKajo from:
-      //      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts AS p JOIN $wpdb->postmeta AS m ON p.ID = m.post_id WHERE meta_value = '".esc_sql($this->cookie)."' AND post_type = 'topic'" );
-    } else if( !current_user_can('moderate') && get_current_user_id() > 0 ) {
-      return $wpdb->get_col( "SELECT ID FROM $wpdb->posts WHERE post_author = ".intval(get_current_user_id())." AND post_type IN ( 'topic', 'reply' ) AND post_status != 'trash' " );
-    } else {
-      return false;
-    }
-  }
-  
   function fix_forum_from_address() {
     return $this->sEmail;
   }
@@ -204,37 +194,68 @@ class bbPressModeration {
   }*/
   
   
-  function moderated_posts_allow_reply( $can ) {
-    if( !$this->cookie ) return $can;
-    
-    if( $aIds = $this->cookie_get_ids() ) {
-      global $post;
-        if( in_array($post->ID, $aIds ) ) {
-        return true;
-      }
+  function moderated_posts_allow_reply($can) {
+    if (!$this->cookie)
+      return $can;
+    if ( !in_array($post->ID, $this->get_hidden_ids() ) ) {
+      return true;
     }
-    
     return $can;
   }
-  
-  
-  function moderated_posts_for_poster( $query ) { //  users with cookie get even the pending posts
+
+  function get_hidden_ids() {
+    if ( current_user_can('moderate_comments') ) 
+      return false;
     
+    if( count($this->aHidden) )
+      return $this->aHidden;
     
-    if( is_admin() ) return;
-    
-    if( (isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' ) ) && ( $this->cookie || is_user_logged_in() )  ) {
-      if( is_array($query->query_vars['post_status']) ) {
-        $query->query_vars['post_status'][] = 'pending';
-        $query->query_vars['post_status'][] = 'closed';
-      } else if( strlen($query->query_vars['post_status']) ) {
-        $query->query_vars['post_status'] .= ',closed,pending';
-      } else if( !current_user_can('moderate_comments') && !isset($query->query_vars['post_status']) ) {
-        $query->query_vars['post_status'] = 'publish,closed,pending';
+    global $wpdb;
+
+    $cookie_show_ids = false;
+    if (!is_user_logged_in() && $this->cookie) {
+      $cookie_show_ids = $wpdb->get_col("SELECT post_id FROM $wpdb->postmeta WHERE meta_value = '" . esc_sql($this->cookie) . "' ");
+    }
+    $cond = '';
+    if (is_user_logged_in() && get_current_user_id() != 0) {
+      $cond = 'post_author != ' . get_current_user_id();
+    }
+    $cookie_hidden_ids = $wpdb->get_col("SELECT ID FROM $wpdb->posts  WHERE post_status = 'pending' AND post_type IN ( 'topic', 'reply' ) " . $cond);
+
+    foreach ($cookie_hidden_ids as $key => $val) {
+      if (in_array($val, $cookie_show_ids, true)) {
+        unset($cookie_hidden_ids[$key]);
       }
     }
-    
-    
+
+    return $cookie_hidden_ids;
+  }
+
+  function moderated_posts_for_poster($query) { //  users with cookie get even the pending posts
+    if (is_admin())
+      return;
+
+    if ((isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' || is_array($query->query['post_type']) && in_array('reply',$query->query['post_type']) ) ) ) {
+
+      if (is_array($query->query_vars['post_status'])) {
+        $query->query_vars['post_status'][] = 'pending';
+        $query->query_vars['post_status'][] = 'closed';
+      } else if (strlen($query->query_vars['post_status'])) {
+        $query->query_vars['post_status'] .= ',closed,pending';
+      } else if (!current_user_can('moderate_comments') && !isset($query->query_vars['post_status'])) {
+        $query->query_vars['post_status'] = 'publish,closed,pending';
+      }
+      
+      $query->query_vars['post_parent__not_in'] = $this->get_hidden_ids();
+      $query->query_vars['post__not_in'] = $this->get_hidden_ids();
+
+
+      if (isset($_GET['mvbbq'])) {
+        var_dump('query_vars', $query->query_vars);
+      }
+    }
+
+
     if( isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' ) && isset($query->query['edit']) && $query->query['edit'] == 1 ) {
       $query->query_vars['post_status'] = 'publish,closed,pending';
       /*$query->query['name'] = $query->query['name'];
@@ -248,31 +269,6 @@ class bbPressModeration {
     
     if( !isset($query->query['post_type']) || ( $query->query['post_type'] != 'topic' && ( is_array($query->query['post_type']) && implode('',$query->query['post_type']) != 'topicreply' ) ) ) return;
     
-    
-    //var_dump($query);
-  }
-  
-  
-  function moderated_posts_remove( $aPosts ) {  //  pending posts are removed if their IDs don't match
-    if( $aIds = $this->cookie_get_ids() ) {
-      foreach( $aPosts AS $k => $objPost ) {
-        if( $objPost->post_status != 'publish' && !in_array($objPost->ID,$aIds) && !in_array($objPost->post_parent,$aIds) ) {
-          unset($aPosts[$k]);
-        }
-      }
-    }
-    return $aPosts;
-  }
-  
-  function moderated_posts_where( $where = '' ) {
-    if( $ids = $this->cookie_get_ids() ) {
-      global $wpdb;
-      $where = str_ireplace($wpdb->prefix."posts.post_status = 'publish'", $wpdb->prefix."posts.post_status = 'publish' OR ID IN (".implode(',',$ids).")", $where);
-      $where = str_ireplace($wpdb->prefix."posts.post_status = 'pending'", "0=1", $where); //fix by fvKajo
-    }
-    //var_dump( $where );
-    
-    return $where;
   }
   
   
@@ -395,12 +391,7 @@ class bbPressModeration {
       if( !( current_user_can('moderate_comments') && isset($_GET['view']) && $_GET['view'] == 'all'  ) ) {              
         $bbp['post_status'] = 'publish,pending';
       }
-    } else if( $this->cookie ) {
-      add_filter('posts_where', array($this, 'moderated_posts_where'));
     }
-    
-    
-    
     
     /*if (get_option(self::TD . 'always_display')) {
     
@@ -479,15 +470,13 @@ class bbPressModeration {
   * @return string - New content
   */
   function content($content, $post_id) {
-  
     $post = get_post( $post_id );
-    $aIds = $this->cookie_get_ids();
-    $aIds_registered = $this->fv_bbpress_tweaks_get_ids();
+    
     if ($post && $post->post_status == 'pending') {
       if (current_user_can('moderate')) {
         // Admin can see body
         return __('(Awaiting moderation)', self::TD) . '<br />' . $content;
-      } elseif ( ( $aIds && ( in_array( $post_id, $aIds ) || in_array( $post->post_parent, $aIds ) ) ) || ( $aIds_registered && ( in_array( $post_id, $aIds_registered ) || in_array( $post->post_parent, $aIds_registered ) ) ) ) {
+      } elseif ( !in_array($post_id , $this->get_hidden_ids() && !in_array($post->post_parent , $this->get_hidden_ids() ) ) ) {
         // See the content if it belongs to you
         return __('(Awaiting moderation)', self::TD) . '<br />' . $content;
       } else {
