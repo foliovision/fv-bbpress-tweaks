@@ -228,6 +228,8 @@ class bbPressModeration {
         unset($cookie_hidden_ids[$key]);
       }
     }
+    
+    $this->aHidden = $cookie_hidden_ids;
 
     return $cookie_hidden_ids;
   }
