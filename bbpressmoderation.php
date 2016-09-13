@@ -197,6 +197,7 @@ class bbPressModeration {
   function moderated_posts_allow_reply($can) {
     if (!$this->cookie)
       return $can;
+    global $post;
     if ( !in_array($post->ID, $this->get_hidden_ids() ) ) {
       return true;
     }
@@ -205,7 +206,7 @@ class bbPressModeration {
 
   function get_hidden_ids() {
     if ( current_user_can('moderate_comments') ) 
-      return false;
+      return array();
     
     if( count($this->aHidden) )
       return $this->aHidden;
@@ -218,7 +219,7 @@ class bbPressModeration {
     }
     $cond = '';
     if (is_user_logged_in() && get_current_user_id() != 0) {
-      $cond = 'post_author != ' . get_current_user_id();
+      $cond = ' AND post_author != ' . get_current_user_id();
     }
     $cookie_hidden_ids = $wpdb->get_col("SELECT ID FROM $wpdb->posts  WHERE post_status = 'pending' AND post_type IN ( 'topic', 'reply' ) " . $cond);
 
