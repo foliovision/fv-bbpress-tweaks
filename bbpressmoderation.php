@@ -213,7 +213,7 @@ class bbPressModeration {
     
     global $wpdb;
 
-    $cookie_show_ids = false;
+    $cookie_show_ids = array();
     if (!is_user_logged_in() && $this->cookie) {
       $cookie_show_ids = $wpdb->get_col("SELECT post_id FROM $wpdb->postmeta WHERE meta_value = '" . esc_sql($this->cookie) . "' ");
     }
