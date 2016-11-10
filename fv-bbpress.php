@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FV bbPress Tweaks
  * Description: Improve your forum URL structure, allow guest posting and lot more
- * Version: 0.2.7.2
+ * Version: 0.2.7.3
  * Author: Foliovision
  * Author URI: http://foliovision.com
  */

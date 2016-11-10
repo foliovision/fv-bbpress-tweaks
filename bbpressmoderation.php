@@ -129,6 +129,8 @@ class bbPressModeration {
     } else if( get_option('admin_email') ) {
       $this->sEmail = get_option('admin_email');
     }
+
+    add_action( 'wp', array($this, 'hide_pending_content'), 999 );
   
   }
   
@@ -249,8 +251,10 @@ class bbPressModeration {
         $query->query_vars['post_status'] = 'publish,closed,pending';
       }
       
-      $query->query_vars['post_parent__not_in'] = $this->get_hidden_ids();
-      $query->query_vars['post__not_in'] = $this->get_hidden_ids();
+      if( !isset($query->query_vars['topic']) ) {  //  only exclude the topics by ID if it's not the single view!
+        $query->query_vars['post_parent__not_in'] = $this->get_hidden_ids();
+        $query->query_vars['post__not_in'] = $this->get_hidden_ids();
+      }
 
 
       if (isset($_GET['mvbbq'])) {
@@ -1289,6 +1293,33 @@ class bbPressModeration {
     
     return ('publish' == bbp_get_topic_status($topic_id));
   }
+
+  function hide_pending_content(){
+
+    if( isset($_GET['bbpresspending']) ) {
+      global $post;
+      var_dump('bbpresspending',$post->post_author,$post->post_status,get_current_user_id());
+    }
+
+    global $post;
+    if( $post->post_status != 'publish' && get_current_user_id() != $post->post_author && !current_user_can('moderate') ) {
+      status_header(404);
+      $post->post_type = '';
+
+      //global $posts;
+      //$posts = array( $post );
+
+      if( is_user_logged_in() ) {
+        $post->post_content = "You don't have access to this topic.";
+      } else {
+        $post->post_content = "You have to log in to access this topic.".wp_login_form( array( 'echo' => false ) );
+      }
+
+      add_filter( 'is_bbpress', '__return_true' );
+
+    }
+
+  }
   
   /**
   * Notify admin of new reply with pending status
@@ -1795,12 +1826,13 @@ HTML;
     return checked( $topic_subscribed, true, false );
   }   
   
-  function fv_bbpress_tweaks_hide_user_profile($content){
+  function fv_bbpress_tweaks_hide_user_profile( $template ){
     if( !$this->fv_bbpress_tweaks_membership_user() && bbp_is_single_user()) {
       wp_redirect( home_url( get_option('_bbp_root_slug') ) );
       exit();
-    }     
-    return $content;
+    }
+
+    return $template;
   }
   
   

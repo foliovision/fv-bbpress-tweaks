@@ -34,6 +34,7 @@ No screenshots yet.
 
 = 0.2.8 =
 
+* Accessing a pending topic now also shows login form or no access message if the user is not permitted to access it
 * Fix for showing pending replies in topic view after some reply was deleted (?view=all)
 * Partial fix for redirection from ?p={reply id}
 * Adding notification and fixing error when bbPress plugin is turned off
