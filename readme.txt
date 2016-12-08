@@ -38,6 +38,7 @@ No screenshots yet.
 * Fix for showing pending replies in topic view after some reply was deleted (?view=all)
 * Partial fix for redirection from ?p={reply id}
 * Adding notification and fixing error when bbPress plugin is turned off
+* Added option for posting comments directly into Forums
 
 = 0.2.7 =
 

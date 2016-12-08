@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FV bbPress Tweaks
  * Description: Improve your forum URL structure, allow guest posting and lot more
- * Version: 0.2.7.3
+ * Version: 0.2.7.4
  * Author: Foliovision
  * Author URI: http://foliovision.com
  */
@@ -39,6 +39,7 @@ if( !class_exists('bbPressModeration') ) {
 }
 
 include( dirname(__FILE__).'/search-before-post.php' );
+include( dirname(__FILE__).'/comment-to-topic.php' );
 
 
 register_activation_hook(__FILE__,'fv_bbpress_refresh_rules');
