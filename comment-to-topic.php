@@ -63,6 +63,8 @@ class FvBbpressCommentToTopic {
       );
     }
 
+    $author = bbp_get_current_user_id();
+
     //topic:
     $post     = get_post( $commentdata['comment_post_ID'] );
     $title    = $post->post_title;
@@ -90,6 +92,8 @@ class FvBbpressCommentToTopic {
 
       $topic_data    = apply_filters( 'bbp_new_topic_pre_insert', $data );
       $forum_post_id = bbp_insert_topic( $topic_data );
+
+      do_action( 'bbp_new_reply', $forum_post_id, $topic_id, $forum_id, $this->comment_author, $author, false, 0 );
     }
     else {
       // topic exists, add reply
@@ -107,6 +111,8 @@ class FvBbpressCommentToTopic {
 
       $reply_data    = apply_filters( 'bbp_new_reply_pre_insert', $data );
       $forum_post_id = bbp_insert_reply( $reply_data );
+
+      do_action( 'bbp_new_topic', $forum_post_id, $forum_id, $this->comment_author, $author );
     }
 
     if( ! $forum_post_id ) {
@@ -130,6 +136,9 @@ class FvBbpressCommentToTopic {
     if( ! $this->comment_author ) {
       return $data;
     }
+
+    // set up cookies
+    bbp_set_current_anonymous_user_data( $this->comment_author  );
 
     return $this->comment_author;
   }
