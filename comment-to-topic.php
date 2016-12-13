@@ -89,7 +89,7 @@ class FvBbpressCommentToTopic {
     $title    = $post->post_title;
     $content  = $commentdata['comment_content'];
 
-    $query    = "SELECT ID FROM {$wpdb->posts} WHERE post_title = '".esc_sql( $title )."' AND post_parent = {$forum_id}";
+    $query    = "SELECT ID FROM {$wpdb->posts} WHERE post_title = '".esc_sql( $title )."' AND post_parent = ".esc_sql( $forum_id );
     $topic_id = $wpdb->get_var( $query );
 
     if( $this->debug ) {
