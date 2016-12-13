@@ -2,12 +2,14 @@
 
 class FvBbpressCommentToTopic {
 
+  private $debug          = true;
   private $comment_author = false;
 
   function __construct() {
     add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
     add_action( 'save_post', array( $this, 'save_meta_boxes' ) );
 
+    add_filter( 'comment_form_before', array( $this, 'add_admin_note_to_comment_fields' ) );
     add_filter( 'preprocess_comment', array( $this, 'preprocess_comment' ) );
     add_filter( 'bbp_filter_anonymous_post_data', array( $this, 'bbp_filter_anonymous_post_data' ) );
   }
@@ -21,7 +23,7 @@ class FvBbpressCommentToTopic {
   function save_meta_boxes() {
     global $post;
 
-    if ( !isset( $_POST['fv-bbpress-comment-to-topic'] ) || !intval( $_POST['fv-bbpress-comment-to-topic'] ) ) {
+    if ( !isset( $_POST['fv-bbpress-comment-to-topic'] ) ) {
       return;
     }
 
@@ -35,17 +37,34 @@ class FvBbpressCommentToTopic {
     $fv_bbpress_reply_forum_id = get_post_meta( $post->ID, '_fv_bbpress_reply_forum_id', true );
     $fv_bbpress_reply_forum_id = ( $fv_bbpress_reply_forum_id ) ? $fv_bbpress_reply_forum_id : 0;
 
-    echo '<label for="fv-bbpress-comment-to-topic">Forum ID:</label> ';
-    echo '<input type="number" name="fv-bbpress-comment-to-topic" id="fv-bbpress-comment-to-topic" value="'.$fv_bbpress_reply_forum_id.'" /><br/>'."\n";
+    echo '<label for="fv-bbpress-comment-to-topic">Forum:</label> ';
+    //echo '<input type="number" name="fv-bbpress-comment-to-topic" id="fv-bbpress-comment-to-topic" value="'.$fv_bbpress_reply_forum_id.'" /><br/>'."\n";
 
-    echo '<p>Set the <strong>bbpress forum ID</strong> where the comments will be posted as topics (replies).<br/></p>';
-    echo '<p>Set to 0 for disabling this functionality.</p>';
+    bbp_dropdown( array(
+      'show_none' => __( '(Select plugin sub-forum)', 'bbpress' ),
+      'selected'  => $fv_bbpress_reply_forum_id,
+      'select_id' => 'fv-bbpress-comment-to-topic'
+    ) );
+
+    echo '<p>Set the <strong>bbpress forum</strong> where the comments will be posted as topics (replies).<br/></p>';
+    echo '<p>Leave empty for disalbe this functionality.</p>';
+  }
+
+  function add_admin_note_to_comment_fields( $fields ) {
+    global $post;
+
+    $forum_id = get_post_meta( $post->ID, '_fv_bbpress_reply_forum_id', true );
+    if( $forum_id ) {
+      echo "\n<!-- FV bbPress Tweaks: comment from this form will be posted in bbpress forum: {$forum_id} -->\n";
+    }
   }
 
   function preprocess_comment( $commentdata  ) {
     global $wpdb;
 
-    //var_dump( $commentdata ); die();
+    if( $this->debug ) {
+      $this->debug_log( $commentdata );
+    }
 
     $post_id  = $commentdata['comment_post_ID'];
     $forum_id = get_post_meta( $post_id, '_fv_bbpress_reply_forum_id', true );
@@ -70,11 +89,17 @@ class FvBbpressCommentToTopic {
     $title    = $post->post_title;
     $content  = $commentdata['comment_content'];
 
-    $topic_id = $wpdb->get_var(
-      "SELECT ID FROM {$wpdb->posts}
-      WHERE post_title = '{$title}'
-      AND post_parent = {$forum_id}"
-    );
+    $query    = "SELECT ID FROM {$wpdb->posts} WHERE post_title = '".esc_sql( $title )."' AND post_parent = {$forum_id}";
+    $topic_id = $wpdb->get_var( $query );
+
+    if( $this->debug ) {
+      $this->debug_log( array(
+        'author'    => $this->comment_author,
+        'forum_id'  => $forum_id,
+        'topic_id'  => $topic_id,
+        'query'     => $query
+      ) );
+    }
 
     if( ! $topic_id ) {
       // create new topic
@@ -115,12 +140,24 @@ class FvBbpressCommentToTopic {
       do_action( 'bbp_new_topic', $forum_post_id, $forum_id, $this->comment_author, $author );
     }
 
+    if( $this->debug ) {
+      $this->debug_log( array(
+        'data'          => $data,
+        'forum_post_id' => $forum_post_id
+      ) );
+    }
+
     if( ! $forum_post_id ) {
       // something went wrong
       return false;
     }
 
     $url = get_permalink( $forum_post_id );
+
+    if( $this->debug ) {
+      $this->debug_log( $url );
+    }
+
     if( ! $url ) {
       return false;
     }
@@ -141,6 +178,11 @@ class FvBbpressCommentToTopic {
     bbp_set_current_anonymous_user_data( $this->comment_author  );
 
     return $this->comment_author;
+  }
+
+  function debug_log( $data ) {
+    $content = date('r')."\n".var_export( $data, true )."\n\n";
+    file_put_contents( ABSPATH.'fv-bbpress-comment-to-topic-'.md5( AUTH_SALT ), $content, FILE_APPEND );
   }
 
 
