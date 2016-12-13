@@ -1298,10 +1298,14 @@ class bbPressModeration {
 
     if( isset($_GET['bbpresspending']) ) {
       global $post;
-      var_dump('bbpresspending',$post->post_author,$post->post_status,get_current_user_id());
+      var_dump('bbpresspending',$post->post_author,$post->post_status,get_current_user_id(),get_post_meta($post->ID,'_fv_bbp_anonymous_email',true),$this->cookie);
     }
-
+    
     global $post;
+    if( $this->cookie && get_post_meta($post->ID,'_fv_bbp_anonymous_email',true) == $this->cookie ) {
+      return;
+    }
+    
     if( $post->post_status != 'publish' && get_current_user_id() != $post->post_author && !current_user_can('moderate') ) {
       status_header(404);
       $post->post_type = '';
