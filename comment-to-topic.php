@@ -10,7 +10,7 @@ class FvBbpressCommentToTopic {
     add_action( 'save_post', array( $this, 'save_meta_boxes' ) );
 
     add_filter( 'comment_form_before', array( $this, 'add_admin_note_to_comment_fields' ) );
-    add_filter( 'preprocess_comment', array( $this, 'preprocess_comment' ) );
+    add_filter( 'pre_comment_approved', array( $this, 'pre_comment_approved' ), 999, 2 );
     add_filter( 'bbp_filter_anonymous_post_data', array( $this, 'bbp_filter_anonymous_post_data' ) );
   }
 
@@ -59,8 +59,12 @@ class FvBbpressCommentToTopic {
     }
   }
 
-  function preprocess_comment( $commentdata  ) {
+  function pre_comment_approved( $approved, $commentdata  ) {
     global $wpdb;
+
+    if( $approved == 'spam' ) {
+      return $approved;
+    }
 
     if( $this->debug ) {
       $this->debug_log( $commentdata );
@@ -70,7 +74,7 @@ class FvBbpressCommentToTopic {
     $forum_id = get_post_meta( $post_id, '_fv_bbpress_reply_forum_id', true );
 
     if( ! $forum_id ) {
-      return $commentdata;
+      return $approved;
     }
 
     //author:
@@ -149,7 +153,7 @@ class FvBbpressCommentToTopic {
 
     if( ! $forum_post_id ) {
       // something went wrong
-      return false;
+      return 'hold';
     }
 
     $url = get_permalink( $forum_post_id );
@@ -159,10 +163,8 @@ class FvBbpressCommentToTopic {
     }
 
     if( ! $url ) {
-      return false;
+      return 'hold';
     }
-
-    //var_dump( $forum_post_id, $url ); die();
 
     wp_redirect( $url );
     exit;
