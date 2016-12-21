@@ -10,7 +10,7 @@ class FvBbpressCommentToTopic {
     add_action( 'save_post', array( $this, 'save_meta_boxes' ) );
 
     add_filter( 'comment_form_before', array( $this, 'add_admin_note_to_comment_fields' ) );
-    add_filter( 'pre_comment_approved', array( $this, 'pre_comment_approved' ), 999, 2 );
+    add_filter( 'pre_comment_approved', array( $this, 'pre_comment_approved' ), 999999, 2 );
     add_filter( 'bbp_filter_anonymous_post_data', array( $this, 'bbp_filter_anonymous_post_data' ) );
   }
 
@@ -153,17 +153,14 @@ class FvBbpressCommentToTopic {
 
     if( ! $forum_post_id ) {
       // something went wrong
-      return 'hold';
+      // comment pending
+      return 0;
     }
 
     $url = get_permalink( $forum_post_id );
-
+    
     if( $this->debug ) {
       $this->debug_log( $url );
-    }
-
-    if( ! $url ) {
-      return 'hold';
     }
 
     wp_redirect( $url );
