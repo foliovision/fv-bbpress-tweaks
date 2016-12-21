@@ -62,16 +62,17 @@ class FvBbpressCommentToTopic {
   function pre_comment_approved( $approved, $commentdata  ) {
     global $wpdb;
 
-    if( $approved == 'spam' ) {
-      return $approved;
-    }
+    $this->debug_log( $commentdata );
+    $this->debug_log( $approved );
 
-    if( $this->debug ) {
-      $this->debug_log( $commentdata );
+    if( $approved === 'spam' ) {
+      return $approved;
     }
 
     $post_id  = $commentdata['comment_post_ID'];
     $forum_id = get_post_meta( $post_id, '_fv_bbpress_reply_forum_id', true );
+
+    $this->debug_log( $forum_id );
 
     if( ! $forum_id ) {
       return $approved;
@@ -96,14 +97,12 @@ class FvBbpressCommentToTopic {
     $query    = "SELECT ID FROM {$wpdb->posts} WHERE post_title = '".esc_sql( $title )."' AND post_parent = ".esc_sql( $forum_id )." AND post_status = 'publish'";
     $topic_id = $wpdb->get_var( $query );
 
-    if( $this->debug ) {
-      $this->debug_log( array(
-        'author'    => $this->comment_author,
-        'forum_id'  => $forum_id,
-        'topic_id'  => $topic_id,
-        'query'     => $query
-      ) );
-    }
+    $this->debug_log( array(
+      'author'    => $this->comment_author,
+      'forum_id'  => $forum_id,
+      'topic_id'  => $topic_id,
+      'query'     => $query
+    ) );
 
     if( ! $topic_id ) {
       // create new topic
@@ -144,12 +143,7 @@ class FvBbpressCommentToTopic {
       do_action( 'bbp_new_topic', $forum_post_id, $forum_id, $this->comment_author, $author );
     }
 
-    if( $this->debug ) {
-      $this->debug_log( array(
-        'data'          => $data,
-        'forum_post_id' => $forum_post_id
-      ) );
-    }
+    $this->debug_log( $data );
 
     if( ! $forum_post_id ) {
       // something went wrong
@@ -159,9 +153,7 @@ class FvBbpressCommentToTopic {
 
     $url = get_permalink( $forum_post_id );
     
-    if( $this->debug ) {
-      $this->debug_log( $url );
-    }
+    $this->debug_log( $url );
 
     wp_redirect( $url );
     exit;
@@ -180,6 +172,10 @@ class FvBbpressCommentToTopic {
   }
 
   function debug_log( $data ) {
+    if( ! $this->debug ) {
+      return;
+    }
+
     $content = date('r')."\n".var_export( $data, true )."\n\n";
     file_put_contents( ABSPATH.'fv-bbpress-comment-to-topic-'.md5( AUTH_SALT ), $content, FILE_APPEND );
   }
