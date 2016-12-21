@@ -69,6 +69,10 @@ class FvBbpressCommentToTopic {
       return $approved;
     }
 
+    if( in_array( $commentdata['comment_type'], array( 'pingback', 'trackback' ) ) ) {
+      return $approved;
+    }
+
     $post_id  = $commentdata['comment_post_ID'];
     $forum_id = get_post_meta( $post_id, '_fv_bbpress_reply_forum_id', true );
 
