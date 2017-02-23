@@ -61,16 +61,27 @@ class FvBbpressCommentToTopic {
 
   function pre_comment_approved( $approved, $commentdata  ) {
     global $wpdb;
+    global $wp_filter;
 
     $this->debug_log( $commentdata );
     $this->debug_log( $approved );
 
-    if( $approved === 'spam' ) {
+    if( in_array( $commentdata['comment_type'], array( 'pingback', 'trackback' ) ) ) {
       return $approved;
     }
 
-    if( in_array( $commentdata['comment_type'], array( 'pingback', 'trackback' ) ) ) {
+    if( $approved === 'spam' ) {
       return $approved;
+    }
+  
+    // cleantalk changed behavior, it automatically thrashes comment with spam flag == 2
+    // we are checking  if cleantalk filter for thrash has been added
+    foreach( $wp_filter['comment_post'] as $priority => $comment_post_filters ) {
+      foreach( $comment_post_filters as $filter => $data ) {
+        if( $filter === 'ct_wp_trash_comment' ) {
+          return $approved;
+        }
+      }
     }
 
     $post_id  = $commentdata['comment_post_ID'];
