@@ -242,12 +242,12 @@ class bbPressModeration {
 
     if ((isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' || is_array($query->query['post_type']) && in_array('reply',$query->query['post_type']) ) ) ) {
 
-      if (is_array($query->query_vars['post_status'])) {
+      if (isset( $query->query_vars['post_status'] ) && is_array($query->query_vars['post_status'])) {
         $query->query_vars['post_status'][] = 'pending';
         $query->query_vars['post_status'][] = 'closed';
-      } else if (strlen($query->query_vars['post_status'])) {
+      } else if (isset( $query->query_vars['post_status'] ) && strlen($query->query_vars['post_status'])) {
         $query->query_vars['post_status'] .= ',closed,pending';
-      } else if (!current_user_can('moderate_comments') && !isset($query->query_vars['post_status'])) {
+      } else if (!isset($query->query_vars['post_status']) && !current_user_can('moderate_comments')) {
         $query->query_vars['post_status'] = 'publish,closed,pending';
       }
       
@@ -483,7 +483,7 @@ class bbPressModeration {
       if (current_user_can('moderate')) {
         // Admin can see body
         return __('(Awaiting moderation)', self::TD) . '<br />' . $content;
-      } elseif ( !in_array($post_id , $this->get_hidden_ids() && !in_array($post->post_parent , $this->get_hidden_ids() ) ) ) {
+      } elseif ( !empty( $this->get_hidden_ids() ) || ( !in_array($post_id , $this->get_hidden_ids() && !in_array($post->post_parent , $this->get_hidden_ids() ) ) ) ) {
         // See the content if it belongs to you
         return __('(Awaiting moderation)', self::TD) . '<br />' . $content;
       } else {
@@ -1295,14 +1295,17 @@ class bbPressModeration {
   }
 
   function hide_pending_content(){
+    global $post;
 
     if( isset($_GET['bbpresspending']) ) {
-      global $post;
-      var_dump('bbpresspending',$post->post_author,$post->post_status,get_current_user_id());
+      var_dump('bbpresspending',$post->post_author,$post->post_status,get_current_user_id(),get_post_meta($post->ID,'_fv_bbp_anonymous_email',true),$this->cookie);
     }
-
-    global $post;
-    if( $post->post_status != 'publish' && get_current_user_id() != $post->post_author && !current_user_can('moderate') ) {
+    
+    if( $this->cookie && get_post_meta($post->ID,'_fv_bbp_anonymous_email',true) == $this->cookie ) {
+      return;
+    }
+    
+    if( isset( $post ) && $post->post_status != 'publish' && get_current_user_id() != $post->post_author && !current_user_can('moderate') ) {
       status_header(404);
       $post->post_type = '';
 

@@ -93,8 +93,15 @@ function fv_search_before_post_script() {
       $('#new-post .bbp-submit-wrapper').show();
       $('#new-post .form-allowed-tags').show();
     })
+
+    $("#new-post").submit( function(event) {
+      if( $("#fv_bbp_forum_id").val() == "" ){
+        event.preventDefault();
+        alert("Please pick pluging sub-forum before submitting your topic.")
+      }
+    });
   });
-  </script>  
+  </script>
   <?php
 }
 
@@ -146,6 +153,8 @@ function fv_bbpress_forum_picker() {
     ?>
   </p>
   <?php
+
+  echo "<!--".var_export(  $forum_id , true ).'-->';
 }
 
 if( isset($_POST['fv_bbp_forum_id']) && intval($_POST['fv_bbp_forum_id']) > 0 ) {
