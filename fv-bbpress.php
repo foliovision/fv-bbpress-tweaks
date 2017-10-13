@@ -561,7 +561,7 @@ The %sitename% Team',
    * @param array $data - new topic/reply data
    */
   public function pre_insert($data) {
-    if( 0 !== $data['post_author'] && '0' !== $data['post_author'] ) {
+    if( 0 != $data['post_author'] || $data['post_status'] == bbp_get_spam_status_id() ) {
       return $data;
     }
 
