@@ -131,6 +131,8 @@ class bbPressModeration {
     }
 
     add_action( 'wp', array($this, 'hide_pending_content'), 999 );
+    
+    add_filter( 'comment_cookie_lifetime', array( $this, 'fix_comment_cookie_lifetime' ), 999 );
   
   }
   
@@ -1930,6 +1932,17 @@ HTML;
     return $retval;
   }
   
+  
+  
+  
+  function fix_comment_cookie_lifetime( $time ) {
+    if( get_option(self::TD . 'always_approve_topics') || get_option(self::TD . 'always_approve_replies') ) { //  if guests are allowed to post...
+      if( $time < 24 * 3600 * 365 ) {
+        $time = 24 * 3600 * 365; //  see how WP Rocket lowers the cookie expiration here: https://github.com/wp-media/wp-rocket/blob/0d60c8e91e916a5652fc3607b13ee411a85e4839/inc/front/cookie.php
+      }
+    }
+    return $time;
+  } 
   
   
   
