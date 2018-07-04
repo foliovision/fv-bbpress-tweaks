@@ -32,6 +32,10 @@ No screenshots yet.
 
 == Changelog ==
 
+= 0.2.9 =
+
+* Pending topic reply notifications fix for bbPress 2.6 which will be out soon
+
 = 0.2.8 =
 
 * Accessing a pending topic now also shows login form or no access message if the user is not permitted to access it
