@@ -113,6 +113,10 @@ class bbPressModeration {
       add_action( 'bbp_theme_after_topic_started_by',array( $this, 'fv_bbpress_tweaks_forum_remove_started_by_after') );
       add_action( 'bbp_get_reply_revision_log', '__return_false' );
       add_action( 'bbp_get_topic_revision_log', '__return_false' );
+      
+      add_filter('bbp_current_user_can_publish_forums',array( $this,'cant_post') );
+      add_filter('bbp_current_user_can_publish_topics',array( $this,'cant_post') );
+      add_filter('bbp_current_user_can_publish_replies',array( $this,'cant_post') );
     }
     
     add_action( 'init', array( $this, 'cookie_check' ) );
@@ -155,6 +159,13 @@ class bbPressModeration {
     add_option(self::TD . 'put_in_front_end_moderation_links', 1);
     
     return true;
+  }
+  
+  function cant_post( $can ) {
+    if( !$this->fv_bbpress_tweaks_membership_user() ) {
+      return false;
+    }
+    return $can;
   }
   
   function cookie_check() {
@@ -1720,7 +1731,7 @@ class bbPressModeration {
   
   //  check if person who browse the forum is logged in.
   function fv_bbpress_tweaks_membership_user() {
-    if( current_user_can('access_s2member_level1') )  {
+    if( stripos( implode(get_option('active_plugins')), '/s2member.php') !== false && current_user_can('access_s2member_level1') )  {
       return true;
     }
     
