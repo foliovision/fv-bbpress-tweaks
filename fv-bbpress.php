@@ -1270,3 +1270,5 @@ function fv_bbpress_dont_setup_akismet() {
 }
 
 endif;
+
+add_filter( 'bbp_subscription_to_email', '__return_null' ); // forum notifications for users are sent with Bcc, so bbPress uses the forum address as "To", lets stop it! https://bbpress.trac.wordpress.org/ticket/2671
