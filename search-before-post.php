@@ -24,6 +24,7 @@ function fv_search_before_post_script() {
       $('#new-post .bbp-the-content-wrapper').hide();
       $('#new-post .bbp-submit-wrapper').hide();
       $('#new-post .form-allowed-tags').hide();
+      $('#new-post .bbp-fv-antispam-captcha').hide();
       
       var did_search = false;
       var dont_run = false;
@@ -93,6 +94,7 @@ function fv_search_before_post_script() {
         $('#new-post .bbp-the-content-wrapper').show();
         $('#new-post .bbp-submit-wrapper').show();
         $('#new-post .form-allowed-tags').show();
+        $('#new-post .bbp-fv-antispam-captcha').show();
       })
 
       $("#new-post").submit( function(event) {
