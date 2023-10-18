@@ -210,6 +210,10 @@ class bbPressModeration {
   
   
   function moderated_posts_allow_reply($can) {
+    if ( current_user_can('moderate_comments') ) {
+      return true;
+    }
+
     if (!$this->cookie)
       return $can;
     global $post;
