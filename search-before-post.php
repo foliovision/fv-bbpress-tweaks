@@ -21,10 +21,7 @@ function fv_search_before_post_script() {
         return;
       }
       
-      $('#new-post .bbp-the-content-wrapper').hide();
-      $('#new-post .bbp-submit-wrapper').hide();
-      $('#new-post .form-allowed-tags').hide();
-      $('#new-post .bbp-fv-antispam-captcha').hide();
+      toggle(false);
       
       var did_search = false;
       var dont_run = false;
@@ -91,10 +88,7 @@ function fv_search_before_post_script() {
       }
       
       $(document).on('click','.fv-bbp-show-new-post-form', function() {
-        $('#new-post .bbp-the-content-wrapper').show();
-        $('#new-post .bbp-submit-wrapper').show();
-        $('#new-post .form-allowed-tags').show();
-        $('#new-post .bbp-fv-antispam-captcha').show();
+        toggle(true);
       })
 
       $("#new-post").submit( function(event) {
@@ -103,6 +97,14 @@ function fv_search_before_post_script() {
           alert("Please pick pluging sub-forum before submitting your topic.")
         }
       });
+
+      function toggle( show ) {
+        $('#new-post .bbp-the-content-wrapper').toggle(show);
+        $('#new-post .bbp-submit-wrapper').toggle(show);
+        $('#new-post .form-allowed-tags').toggle(show);
+        $('#new-post #plupload-upload-ui').toggle(show);
+        $('#new-post .bbp-fv-antispam-captcha').toggle(show);
+      }
     });
   });
   </script>
