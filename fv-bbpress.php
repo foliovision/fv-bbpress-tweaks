@@ -200,7 +200,6 @@ The %sitename% Team',
       }
     }
 
-    add_filter( 'init', array( $this, 'cache_forums') );  //  todo: only load this when needed
     /* NOTE: added this:
     add_filter( 'cptp_excluded_post_types', function($aExcludedPostTypes) { return array('forum','topic','reply'); } );
     into functions.php and changed the code in plugins/custom-post-type-permalinks/CPTP/Util.php -> get_post_types()*/
@@ -836,12 +835,13 @@ The %sitename% Team',
 
 
 
-  public function cache_forums() {
-    $this->forums = wp_cache_get( 'fv_bbpress_forums' );
-    if( !$this->forums ) {
-      $this->forums = get_posts( array( 'post_type' => 'forum', 'posts_per_page' => -1 ) );
-      wp_cache_set( 'fv_bbpress_forums', $this->forums, 'fv_bbpress', 10 );
+  public function get_forums() {
+    static $forums;
+    if( !isset($forums) ) {
+      $forums = get_posts( array( 'post_type' => 'forum', 'posts_per_page' => -1 ) );
     }
+
+    return $forums;
   }
 
 
@@ -861,8 +861,8 @@ The %sitename% Team',
 
 
   function get_post_from_forums($post){
-    if($this->forums){
-      foreach( $this->forums AS $objForum ) {
+    if( $forums = $this->get_forums() ){
+      foreach( $forums AS $objForum ) {
         if( $objForum->ID == $post->post_parent ) {
           return $objForum;
         }
@@ -915,7 +915,7 @@ The %sitename% Team',
 
   public function forum_rewrite_rules( $aRules ) {
 
-    $aForums = $this->forums;
+    $aForums = $this->get_forums();
     if( !$aForums ) {
       return $aRules;
     }
@@ -947,7 +947,7 @@ The %sitename% Team',
     $aParents = array();
     $aChilds = array();
     
-    foreach( $this->forums AS $objForum ) {
+    foreach( $this->get_forums() AS $objForum ) {
       if( $objForum->post_parent != 0 ) {
         array_push($aChilds,$objForum);
       }else{
@@ -963,7 +963,7 @@ The %sitename% Team',
 
   public function topic_rewrite_rules( $aRules ) {
 
-    if( !$this->forums ) {
+    if( !$this->get_forums() ) {
       return $aRules;
     }
 
