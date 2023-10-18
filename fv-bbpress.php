@@ -854,9 +854,7 @@ The %sitename% Team',
     $content = str_replace( '%sitename%', get_bloginfo('name'), $content );
     $content = str_replace( '%login_page%', site_url('wp-login.php'), $content );
 
-    //TESTING!!
-    //file_put_contents( ABSPATH.'/fv-tc-mails.txt', date('r'). "\n" . $sEmail . "\n". $subject ."\n". $content . "\n" . "------------------\n", FILE_APPEND);
-    wp_mail( $sEmail, $subject, $content );
+    wp_mail( $sEmail, $subject, wpautop($content), array('Content-Type: text/html; charset=UTF-8') );
   }
 
 
