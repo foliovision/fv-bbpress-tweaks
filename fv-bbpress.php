@@ -1264,8 +1264,10 @@ add_action( 'bbp_widgets_init', array( 'FV_BBP_Replies_Widget',   'register_widg
 
 
 
-
+// Add "Solved" on list of topic
 add_action( 'bbp_theme_after_topic_title', 'fv_bbpress_solved' );
+// Add "Solved" on a single topic display (Genesis)
+add_action( 'genesis_entry_header', 'fv_bbpress_solved', 12 );
 
 function fv_bbpress_solved( $post_id = false ){
   if( !$post_id ) $post_id = get_the_ID();    
