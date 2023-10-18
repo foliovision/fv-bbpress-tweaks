@@ -232,10 +232,30 @@ class bbPressModeration {
     
     global $wpdb;
 
+    /**
+     * Figure out which topics and replies should not be hidden as they are authored
+     * by the logged by the user matching the email address stored in cookie.
+     */
     $cookie_show_ids = array();
     if (!is_user_logged_in() && $this->cookie) {
-      $cookie_show_ids = $wpdb->get_col("SELECT post_id FROM $wpdb->postmeta WHERE meta_value = '" . esc_sql($this->cookie) . "' ");
+
+      // Get replies by matching _fv_bbp_anonymous_email postmeta
+      $anonymous_replies = $wpdb->get_col("SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_fv_bbp_anonymous_email' AND meta_value = '" . esc_sql($this->cookie) . "' ");
+
+      if ( $anonymous_replies ) {
+        $cookie_show_ids = array_merge($cookie_show_ids, $anonymous_replies);
+      }
+
+      $user = get_user_by( 'email', $this->cookie );
+      if ( $user ) {
+        $replies_by_user = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM $wpdb->posts WHERE post_author = %s", $user->ID ) );
+
+        if ( $replies_by_user ) {
+          $cookie_show_ids = array_merge($cookie_show_ids, $replies_by_user);
+        }
+      }
     }
+
     $cond = '';
     if (is_user_logged_in() && get_current_user_id() != 0) {
       $cond = ' AND post_author != ' . get_current_user_id();
@@ -1316,11 +1336,12 @@ class bbPressModeration {
   function hide_pending_content(){
     global $post;
 
-    if( isset($_GET['bbpresspending']) ) {
-      var_dump('bbpresspending',$post->post_author,$post->post_status,get_current_user_id(),get_post_meta($post->ID,'_fv_bbp_anonymous_email',true),$this->cookie);
+    if( $this->cookie && get_post_meta($post->ID,'_fv_bbp_anonymous_email',true) == $this->cookie ) {
+      return;
     }
     
-    if( $this->cookie && get_post_meta($post->ID,'_fv_bbp_anonymous_email',true) == $this->cookie ) {
+    // Do nothing if it's not a bbPress forum topic or reply
+    if( isset( $post ) && !in_array($post->post_type, array( 'forum', 'topic', 'reply' ) ) ) {
       return;
     }
     
