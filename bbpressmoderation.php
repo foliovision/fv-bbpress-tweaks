@@ -138,6 +138,8 @@ class bbPressModeration {
     
     add_filter( 'comment_cookie_lifetime', array( $this, 'fix_comment_cookie_lifetime' ), 999 );
   
+    add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
+
   }
   
   /**
@@ -1983,10 +1985,14 @@ HTML;
       }
     }
     return $time;
-  } 
+  }
   
   
   
+  function enqueue_scripts() {
+    wp_enqueue_script('fv-bbpress-tweaks-moderation-ajax', plugins_url('js/moderation-ajax.js', __FILE__), array('jquery'), '1.0', true);
+  }
+
 }
 
 $bbpressmoderation = new bbPressModeration();
