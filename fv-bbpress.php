@@ -963,7 +963,7 @@ The %sitename% Team',
     $aNewRules = array_merge( $aRules, $aNewRules );
 
     $aNewRules = $this->remove_unnecessary_rules($aNewRules);
-    
+
     return $aNewRules;
   }
 
@@ -1303,3 +1303,13 @@ function fv_bbpress_dont_setup_akismet() {
 endif;
 
 add_filter( 'bbp_subscription_to_email', '__return_null' ); // forum notifications for users are sent with Bcc, so bbPress uses the forum address as "To", lets stop it! https://bbpress.trac.wordpress.org/ticket/2671
+
+
+// If the new reply is not approved, do not recalculate the last topic activity time and other things
+add_action( 'bbp_new_reply', function( $reply_id ) {
+  $reply = get_post( $reply_id );
+
+  if( !$reply || $reply->post_status != 'publish' ) {
+    remove_action( 'bbp_new_reply',  'bbp_update_reply', 10, 7 );
+  }
+}, 0 );
