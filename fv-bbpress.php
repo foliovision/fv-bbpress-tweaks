@@ -538,6 +538,33 @@ The %sitename% Team',
 
 
 
+  /*
+   * Different plugins add different rewrite endpoints, and then rewrite_rules in wp_options is big
+   * We do not need these endpoints
+   */
+  function remove_unnecessary_rules( $rules ) {
+    foreach( $rules AS $k => $v ) {
+      if(
+        stripos( $k, '/comment-page-([0-9]{1,})/?$' ) !== false ||
+        stripos( $k, '/edd-add' ) !== false ||
+        stripos( $k, '/edd-remove' ) !== false ||
+        stripos( $k, '/edd-api' ) !== false ||
+        stripos( $k, '/embed/?$' ) !== false ||
+        stripos( $k, '/feed/(feed|rdf|rss|rss2|atom)/?$' ) !== false ||
+        stripos( $k, '/(feed|rdf|rss|rss2|atom)/?$' ) !== false ||
+        stripos( $k, '/fvp(/(.*))?/?$' ) !== false ||
+        stripos( $k, '/ref(/(.*))?/?$' ) !== false ||
+        stripos( $k, '/trackback/?$' ) !== false
+      ) {
+        unset( $rules[$k] );
+      }
+    }
+    return $rules;
+  }
+
+
+
+
   function moderated_posts_for_poster( $query ) { //  users with cookie get even the pending posts
     if( isset($query->query['post_type']) && $query->query['post_type'] == 'topic' ) {
       $query->query_vars['post_status'] = 'publish,pending';
@@ -936,6 +963,8 @@ The %sitename% Team',
     $aNewRules['fv-bbpress-tweaks-detector-235hnguh9hq46j0909iasn0zzdfsAJ'] = 'index.php?fv-bbpress-tweaks-detector-235hnguh9hq46j0909iasn0zzdfsAJ=1';
     
     $aNewRules = array_merge( $aRules, $aNewRules );
+
+    $aNewRules = $this->remove_unnecessary_rules($aNewRules);
     
     return $aNewRules;
   }
@@ -987,6 +1016,8 @@ The %sitename% Team',
     }
 
     $aNewRules = array_merge( $aRules, $aNewRules );
+
+    $aNewRules = $this->remove_unnecessary_rules($aNewRules);
 
     return $aNewRules;
   }
