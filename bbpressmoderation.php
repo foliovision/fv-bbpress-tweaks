@@ -253,8 +253,15 @@ class bbPressModeration {
     if (is_admin())
       return;
 
-    if ((isset($query->query['post_type']) && ( $query->query['post_type'] == 'reply' || $query->query['post_type'] == 'topic' || is_array($query->query['post_type']) && in_array('reply',$query->query['post_type']) ) ) ) {
+    if (
+      isset($query->query['post_type']) && (
+        $query->query['post_type'] == 'reply' ||
+        $query->query['post_type'] == 'topic' ||
+        is_array( $query->query['post_type'] ) && in_array( 'reply', $query->query['post_type'] )
+      )
+    ) {
 
+      // Allow pending topics and replies to show
       if (isset( $query->query_vars['post_status'] ) && is_array($query->query_vars['post_status'])) {
         $query->query_vars['post_status'][] = 'pending';
         $query->query_vars['post_status'][] = 'closed';
@@ -267,11 +274,6 @@ class bbPressModeration {
       if( !isset($query->query_vars['topic']) ) {  //  only exclude the topics by ID if it's not the single view!
         $query->query_vars['post_parent__not_in'] = $this->get_hidden_ids();
         $query->query_vars['post__not_in'] = $this->get_hidden_ids();
-      }
-
-
-      if (isset($_GET['mvbbq'])) {
-        var_dump('query_vars', $query->query_vars);
       }
     }
 
