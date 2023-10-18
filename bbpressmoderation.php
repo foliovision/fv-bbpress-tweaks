@@ -365,7 +365,10 @@ class bbPressModeration {
     if (@$data['post_status']=='spam') return $data; // fix for 1.8.2  hide spam 
     
     // Pointless moderating a post that the current user can approve
-    if (current_user_can('moderate')) return $data;
+    if (current_user_can('moderate')) {
+      $data['post_status'] = 'publish';
+      return $data;
+    }
     
     add_filter( 'wp_insert_post_data', array($this,'pending_post_add_name'), 10, 2 );
     
