@@ -1990,7 +1990,9 @@ HTML;
   
   
   function enqueue_scripts() {
-    wp_enqueue_script('fv-bbpress-tweaks-moderation-ajax', plugins_url('js/moderation-ajax.js', __FILE__), array('jquery'), '1.0', true);
+    if( current_user_can('moderate_comments') && is_bbpress() ) {
+      wp_enqueue_script('fv-bbpress-tweaks-moderation-ajax', plugins_url('js/moderation-ajax.js', __FILE__), array('jquery'), '1.0', true);
+    }
   }
 
 }
