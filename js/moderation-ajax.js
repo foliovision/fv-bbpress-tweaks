@@ -14,6 +14,8 @@ jQuery(function(){
     } else if( anchor.closest('.bbp-lead-topic').length ) {
       current_id = anchor.closest('.bbp-lead-topic').attr('id').replace('bbp-topic-', '').replace('-lead', '');
       is_topic = true;
+    } else if( anchor.closest('.entry').find('.bbp-reply-header').length ) {
+      current_id = anchor.closest('.entry').find('.bbp-reply-header').attr('id').replace('post-', '');
     } else {
       console.error('Unable to find the post id');
       return;
