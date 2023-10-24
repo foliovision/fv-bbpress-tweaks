@@ -29,11 +29,16 @@ jQuery(function(){
       if( current_class == 'bbp-reply-edit-link' || current_class == 'bbp-topic-edit-link' ) {
         // get lead topic 
         var lead_id = jQuery('.bbp-lead-topic').attr('id');
-
         lead_id = lead_id.replace('bbp-topic-', '');
         lead_id = lead_id.replace('-lead', '');
+        
+        var form;
 
-        var form = jQuery(response).find('#new-reply-' + lead_id)
+        if( current_class == 'bbp-reply-edit-link' ) {
+          form = jQuery(response).find('#new-reply-' + lead_id)
+        } else {
+          form = jQuery(response).find('#new-topic-' + lead_id)
+        }
 
         if( is_topic ) {
           jQuery('div#post-' + current_id).replaceWith(form);
