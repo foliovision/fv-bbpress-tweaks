@@ -1,5 +1,5 @@
 jQuery(function(){
-  jQuery(document).on('click', '.bbp-admin-links a.bbp-reply-approve-link,a.bbp-reply-trash-link,a.bbp-reply-restore-link,a.bbp-reply-edit-link,a.bbp-topic-approve-link,a.bbp-topic-trash-link,a.bbp-topic-restore-link,a.bbp-topic-edit-link', function(e){
+  jQuery(document).on('click', '.bbp-admin-links a.bbp-reply-approve-link,a.bbp-reply-trash-link,a.bbp-reply-restore-link,a.bbp-reply-edit-link,a.bbp-topic-approve-link,a.bbp-topic-trash-link,a.bbp-topic-restore-link,a.bbp-topic-edit-link,a.bbp-topic-reply-link', function(e){
     e.preventDefault();
     e.stopPropagation();
 
@@ -20,6 +20,10 @@ jQuery(function(){
       console.error('Unable to find the post id');
       return;
     }
+
+    var spinner = jQuery('div#post-' + current_id).find('[data-fv-bbpress-tweaks-loading-indicator]');
+
+    spinner.shhow();
 
     console.log('FV-bbpress-tweaks: current url', current_url, 'current id', current_id);
 
@@ -66,6 +70,8 @@ jQuery(function(){
 
     }).fail(function() {
       console.error('Failed to get response from server');
+    }).always(function() {
+      spinner.hide();
     });
 
   });

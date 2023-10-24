@@ -140,6 +140,8 @@ class bbPressModeration {
   
     add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
+    add_action( 'bbp_theme_before_topic_content', array($this, 'add_spinner') );
+    add_action( 'bbp_theme_before_reply_content', array($this, 'add_spinner') );
   }
   
   /**
@@ -1993,6 +1995,12 @@ HTML;
     if( current_user_can('moderate_comments') && is_bbpress() ) {
       wp_enqueue_script('fv-bbpress-tweaks-moderation-ajax', plugins_url('js/moderation-ajax.js', __FILE__), array('jquery'), filemtime( __DIR__ . '/js/moderation-ajax.js'), true);
     }
+  }
+
+  function add_spinner() {
+    ?>
+      <div data-fv-bbpress-tweaks-loading-indicator style="display: none"><img width="16" height="16" src="<?php echo site_url('wp-includes/images/wpspin-2x.gif'); ?>" /></div>
+    <?php
   }
 
 }
