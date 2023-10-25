@@ -23,7 +23,7 @@ jQuery(function(){
 
     var spinner = jQuery('div#post-' + current_id).find('[data-fv-bbpress-tweaks-loading-indicator]');
 
-    spinner.shhow();
+    spinner.show();
 
     console.log('FV-bbpress-tweaks: current url', current_url, 'current id', current_id);
 
