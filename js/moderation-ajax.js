@@ -31,6 +31,7 @@ jQuery(function(){
       // get the new header and body
       var new_head = jQuery(response).find('div#post-' + current_id),
        new_body = jQuery(response).find('div.post-' + current_id);
+       new_topic = jQuery(response).find('#bbp-topic-'+current_id+'-lead');
 
       if( current_class == 'bbp-reply-edit-link' || current_class == 'bbp-topic-edit-link' ) {
         // get lead topic 
@@ -61,7 +62,7 @@ jQuery(function(){
 
         // replace the old header and body
         if( is_topic ) {
-          jQuery('div#post-' + current_id).replaceWith(new_head);
+          jQuery('#bbp-topic-' + current_id + '-lead').replaceWith(new_topic);
         } else {
           jQuery('#post-' + current_id).replaceWith(new_head);
           jQuery('.post-' + current_id).replaceWith(new_body); 
