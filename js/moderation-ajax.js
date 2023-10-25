@@ -47,6 +47,11 @@ jQuery(function(){
           form = jQuery(response).find('#new-topic-' + lead_id)
         }
 
+        if( form.length == 0 ) {
+          alert( "Unable to parse response, please reload the page to see if your change was saved properly.")
+          return;
+        }
+
         if( is_topic ) {
           jQuery('div#post-' + current_id).replaceWith(form);
         } else {
@@ -55,15 +60,20 @@ jQuery(function(){
         }
 
       } else {
-        if( new_head.length == 0 || new_body.length == 0 ) {
-          alert( "Unable to parse response, please reload the page to see if your change was saved properly.")
-          return;
-        }
-
         // replace the old header and body
         if( is_topic ) {
+          if( new_topic.length == 0 ) {
+            alert( "Unable to parse response, please reload the page to see if your change was saved properly.")
+            return;
+          }
+
           jQuery('#bbp-topic-' + current_id + '-lead').replaceWith(new_topic);
         } else {
+          if( new_head.length == 0 || new_body.length == 0 ) {
+            alert( "Unable to parse response, please reload the page to see if your change was saved properly.")
+            return;
+          }
+
           jQuery('#post-' + current_id).replaceWith(new_head);
           jQuery('.post-' + current_id).replaceWith(new_body); 
         }
