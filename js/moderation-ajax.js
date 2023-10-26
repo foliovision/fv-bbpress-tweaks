@@ -48,9 +48,9 @@ jQuery(function() {
       }
     }
 
-    var spinner = jQuery('div#post-' + current_id).find('[data-fv-bbpress-tweaks-loading-indicator]');
+    var spinner = jQuery('[data-fv-bbpress-tweaks-loading-indicator=' + current_id + ']');
 
-    spinner.show();
+    spinner.css('display', 'flex');
 
     console.log('FV-bbpress-tweaks: current url', current_url, 'current id', current_id);
 

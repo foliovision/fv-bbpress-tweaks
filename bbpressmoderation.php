@@ -140,6 +140,8 @@ class bbPressModeration {
   
     add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
+    add_action( 'wp_footer', array( $this, 'styles' ) );
+
     add_action( 'bbp_theme_before_topic_content', array($this, 'add_spinner') );
     add_action( 'bbp_theme_before_reply_content', array($this, 'add_spinner') );
   }
@@ -1997,9 +1999,35 @@ HTML;
     }
   }
 
+  function styles() {
+    if( current_user_can('moderate_comments') && is_bbpress() ) {
+      ?>
+      <style>
+        .bbp-topic-content, .bbp-reply-content {
+          position: relative;
+        }
+        [data-fv-bbpress-tweaks-loading-indicator] {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          top: 0;
+          left: 0;
+          background: rgba(255,255,255,.8);
+          align-items: center;
+        }
+        [data-fv-bbpress-tweaks-loading-indicator] img {
+          margin: 0 auto;
+          border: 0;
+        }
+      </style>
+      <?php
+    }
+  }
+
   function add_spinner() {
+    global $post;
     ?>
-      <div data-fv-bbpress-tweaks-loading-indicator style="display: none"><img width="16" height="16" src="<?php echo site_url('wp-includes/images/wpspin-2x.gif'); ?>" /></div>
+      <div data-fv-bbpress-tweaks-loading-indicator="<?php echo $post->ID; ?>" style="display: none"><img width="16" height="16" src="<?php echo site_url('wp-includes/images/wpspin-2x.gif'); ?>" /></div>
     <?php
   }
 
