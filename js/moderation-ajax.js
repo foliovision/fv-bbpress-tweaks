@@ -1,8 +1,26 @@
-jQuery(function(){
+jQuery(function() {
+  function closeWarning(e) {
+    (e || window.event).returnValue = true; //Gecko + IE
+    return true; //Gecko + Webkit, Safari, Chrome etc.
+  }
+
+  jQuery(document).on( 'input', '#bbpress-forums textarea', function() {
+    // check if not empty
+    if( jQuery(this).val().length > 0 ) {
+      window.addEventListener('beforeunload', closeWarning);
+    } else {
+      window.removeEventListener('beforeunload', closeWarning);
+    }
+  });
+
+  jQuery(document).on('click', '#bbp_reply_submit', function() {
+    window.removeEventListener('beforeunload', closeWarning);
+  });
+
   jQuery(document).on('click', '.bbp-admin-links a.bbp-reply-approve-link,a.bbp-reply-trash-link,a.bbp-reply-restore-link,a.bbp-reply-edit-link,a.bbp-topic-approve-link,a.bbp-topic-trash-link,a.bbp-topic-restore-link,a.bbp-topic-edit-link,a.bbp-topic-reply-link', function(e){
     e.preventDefault();
     e.stopPropagation();
-
+    
     var anchor = jQuery(this),
       current_url   =   anchor.attr('href'),
       current_class = anchor.attr('class'),
@@ -19,6 +37,15 @@ jQuery(function(){
     } else {
       console.error('Unable to find the post id');
       return;
+    }
+
+    if( current_class == 'bbp-reply-edit-link' || current_class == 'bbp-topic-edit-link' ) {
+      // check if user is writing a reply
+      if( jQuery('#bbp_reply_content').val().length > 0 ) {
+        if( !confirm('You have an unsaved reply, are you sure you want to start edit?') ) {
+          return;
+        }
+      }
     }
 
     var spinner = jQuery('div#post-' + current_id).find('[data-fv-bbpress-tweaks-loading-indicator]');
