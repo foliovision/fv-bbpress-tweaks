@@ -1345,7 +1345,7 @@ class bbPressModeration {
   function hide_pending_content(){
     global $post;
 
-    if( $this->cookie && get_post_meta($post->ID,'_fv_bbp_anonymous_email',true) == $this->cookie ) {
+    if( $this->cookie && ! empty( $post->ID ) && get_post_meta($post->ID,'_fv_bbp_anonymous_email',true) == $this->cookie ) {
       return;
     }
     
@@ -1364,7 +1364,10 @@ class bbPressModeration {
       if( is_user_logged_in() ) {
         $post->post_content = "You don't have access to this topic.";
       } else {
-        $post->post_content = "You have to log in to access this topic.".wp_login_form( array( 'echo' => false ) );
+        $post->post_content = "You have to log in to access this topic. \n";
+
+        // We put this on new line to avoid Markdown parsing issues.
+        $post->post_content .= wp_login_form( array( 'label_username' => 'Email Address', 'echo' => false ) );
       }
 
       add_filter( 'is_bbpress', '__return_true' );
@@ -1700,8 +1703,8 @@ class bbPressModeration {
   /**
   * Add a Spam row action
   * 
-  * @param unknown_type $actions
-  * @param unknown_type $post
+  * @param array $actions
+  * @param WP_Post $post
   */
   function post_row_actions($actions, $post){
   
