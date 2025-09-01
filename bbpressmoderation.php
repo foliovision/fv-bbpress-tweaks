@@ -46,9 +46,6 @@ class bbPressModeration {
     add_filter( 'bbp_has_topics_query', array( $this, 'query' ) );  //  
     add_filter( 'bbp_has_replies_query', array( $this, 'query' ) );
     
-    add_filter( 'bbp_get_topic_permalink', array( $this, 'permalink' ), 10, 2 );
-    add_filter( 'bbp_get_reply_permalink', array( $this, 'permalink' ), 10, 2 );
-    
     add_filter( 'bbp_get_topic_title', array( $this, 'title' ), 10, 2 );
     
     add_filter( 'bbp_get_reply_content', array( $this, 'content' ), 10, 2 );
@@ -461,40 +458,6 @@ class bbPressModeration {
     
     
     return $bbp;
-  }
-  
-  /**
-  * Trash the permalink for pending topics/replies
-  * Would be nice if we could remove the link entirely
-  * but the filter is a bit too late
-  * 
-  * @param string $permalink - topic or reply permalink
-  * @param int $topic_id - topic or reply ID
-  */
-  function permalink($permalink, $topic_id) {
-    global $post;
-    
-    if( isset($post->post_status) && $post->post_status == 'pending' ) { //  we need to make the permalink pretty, even if it's pending
-      remove_filter('bbp_get_topic_permalink', array($this, 'permalink'), 10, 2);      
-      $post->post_status = 'publish';
-      $topic_id_new = bbp_get_topic_id( $topic_id );
-      
-      if( $topic_id_new != $topic_id ) {
-        $permalink = bbp_get_topic_permalink($topic_id);
-      } else {
-        $permalink = get_permalink($post);
-      }
-      
-      $post->post_status = 'pending';      
-      add_filter('bbp_get_topic_permalink', array($this, 'permalink'), 10, 2);
-    }
-    
-    
-    /*if (!current_user_can('moderate') && $post && $post->post_status == 'pending') {
-    return '#';  // Fudge url to prevent viewing
-    }*/
-    
-    return $permalink;
   }
   
   /**
