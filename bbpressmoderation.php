@@ -45,10 +45,7 @@ class bbPressModeration {
     
     add_filter( 'bbp_has_topics_query', array( $this, 'query' ) );  //  
     add_filter( 'bbp_has_replies_query', array( $this, 'query' ) );
-    
-    add_filter( 'bbp_get_topic_permalink', array( $this, 'permalink' ), 10, 2 );
-    add_filter( 'bbp_get_reply_permalink', array( $this, 'permalink' ), 10, 2 );
-    
+
     add_filter( 'bbp_get_topic_title', array( $this, 'title' ), 10, 2 );
     
     add_filter( 'bbp_get_reply_content', array( $this, 'content' ), 10, 2 );
@@ -120,6 +117,9 @@ class bbPressModeration {
     }
     
     add_action( 'init', array( $this, 'cookie_check' ) );
+
+    // Ensure slugs are generated for topics/replies on insert/update if missing
+    add_filter( 'wp_insert_post_data', array( $this, 'pending_post_add_name' ), 10, 2 );
     
     add_filter( 'bbp_current_user_can_access_create_reply_form', array( $this, 'moderated_posts_allow_reply' ) );
     //add_filter( 'post_type_link', array( $this, 'post_type_link' ), 11, 4 );  //  fix for broken reply editing
@@ -138,6 +138,12 @@ class bbPressModeration {
     
     add_filter( 'comment_cookie_lifetime', array( $this, 'fix_comment_cookie_lifetime' ), 999 );
   
+    add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
+
+    add_action( 'wp_footer', array( $this, 'styles' ) );
+
+    add_action( 'bbp_theme_before_topic_content', array($this, 'add_spinner') );
+    add_action( 'bbp_theme_before_reply_content', array($this, 'add_spinner') );
   }
   
   /**
@@ -319,16 +325,43 @@ class bbPressModeration {
   
   
   function pending_post_add_name( $data, $postarr ) {
-    
-    if( !empty($data['post_title']) ) {
+    // Only ensure slugs for bbPress topics/replies
+    $post_type = isset( $data['post_type'] ) ? $data['post_type'] : '';
+    if ( $post_type !== bbp_get_topic_post_type() && $post_type !== bbp_get_reply_post_type() ) {
+      return $data;
+    }
+
+    // If post_name is already set (non-empty, not false), keep it
+    if ( isset( $data['post_name'] ) && $data['post_name'] && $data['post_name'] !== false ) {
+      return $data;
+    }
+
+    // Derive a title to base the slug on
+    if ( ! empty( $data['post_title'] ) ) {
       $title = $data['post_title'];
     } else {
-      $aTopic = get_post( $data['post_parent'] );
-      $title = get_the_title($aTopic->ID);
+      $parent_id = isset( $data['post_parent'] ) ? (int) $data['post_parent'] : 0;
+      $title     = $parent_id ? get_the_title( $parent_id ) : '';
     }
-    
-    $data['post_name'] = wp_unique_post_slug( sanitize_title($title), false, 'publish', $data['post_type'], $data['post_parent'] );
-    
+
+    // Fallback to generic title if still empty
+    if ( $title === '' ) {
+      $title = __( 'topic', 'bbpress' );
+    }
+
+    // Compute a unique slug for this post
+    $post_id     = isset( $postarr['ID'] ) ? (int) $postarr['ID'] : 0;
+    $post_status = isset( $data['post_status'] ) ? $data['post_status'] : 'publish';
+    $parent_id   = isset( $data['post_parent'] ) ? (int) $data['post_parent'] : 0;
+
+    $data['post_name'] = wp_unique_post_slug(
+      sanitize_title( $title ),
+      $post_id,
+      $post_status,
+      $post_type,
+      $parent_id
+    );
+
     return $data;
   }
   
@@ -369,8 +402,6 @@ class bbPressModeration {
       $data['post_status'] = 'publish';
       return $data;
     }
-    
-    add_filter( 'wp_insert_post_data', array($this,'pending_post_add_name'), 10, 2 );
     
     if ($data['post_author'] == 0) {
       // Anon user - check if need to moderate
@@ -455,40 +486,6 @@ class bbPressModeration {
     
     
     return $bbp;
-  }
-  
-  /**
-  * Trash the permalink for pending topics/replies
-  * Would be nice if we could remove the link entirely
-  * but the filter is a bit too late
-  * 
-  * @param string $permalink - topic or reply permalink
-  * @param int $topic_id - topic or reply ID
-  */
-  function permalink($permalink, $topic_id) {
-    global $post;
-    
-    if( isset($post->post_status) && $post->post_status == 'pending' ) { //  we need to make the permalink pretty, even if it's pending
-      remove_filter('bbp_get_topic_permalink', array($this, 'permalink'), 10, 2);      
-      $post->post_status = 'publish';
-      $topic_id_new = bbp_get_topic_id( $topic_id );
-      
-      if( $topic_id_new != $topic_id ) {
-        $permalink = bbp_get_topic_permalink($topic_id);
-      } else {
-        $permalink = get_permalink($post);
-      }
-      
-      $post->post_status = 'pending';      
-      add_filter('bbp_get_topic_permalink', array($this, 'permalink'), 10, 2);
-    }
-    
-    
-    /*if (!current_user_can('moderate') && $post && $post->post_status == 'pending') {
-    return '#';  // Fudge url to prevent viewing
-    }*/
-    
-    return $permalink;
   }
   
   /**
@@ -1339,7 +1336,7 @@ class bbPressModeration {
   function hide_pending_content(){
     global $post;
 
-    if( $this->cookie && get_post_meta($post->ID,'_fv_bbp_anonymous_email',true) == $this->cookie ) {
+    if( $this->cookie && ! empty( $post->ID ) && get_post_meta($post->ID,'_fv_bbp_anonymous_email',true) == $this->cookie ) {
       return;
     }
     
@@ -1358,7 +1355,10 @@ class bbPressModeration {
       if( is_user_logged_in() ) {
         $post->post_content = "You don't have access to this topic.";
       } else {
-        $post->post_content = "You have to log in to access this topic.".wp_login_form( array( 'echo' => false ) );
+        $post->post_content = "You have to log in to access this topic. \n";
+
+        // We put this on new line to avoid Markdown parsing issues.
+        $post->post_content .= wp_login_form( array( 'label_username' => 'Email Address', 'echo' => false ) );
       }
 
       add_filter( 'is_bbpress', '__return_true' );
@@ -1694,8 +1694,8 @@ class bbPressModeration {
   /**
   * Add a Spam row action
   * 
-  * @param unknown_type $actions
-  * @param unknown_type $post
+  * @param array $actions
+  * @param WP_Post $post
   */
   function post_row_actions($actions, $post){
   
@@ -1983,10 +1983,48 @@ HTML;
       }
     }
     return $time;
-  } 
+  }
   
   
   
+  function enqueue_scripts() {
+    if( current_user_can('moderate_comments') && is_bbpress() ) {
+      wp_enqueue_script('fv-bbpress-tweaks-moderation-ajax', plugins_url('js/moderation-ajax.js', __FILE__), array('jquery'), filemtime( __DIR__ . '/js/moderation-ajax.js'), true);
+    }
+  }
+
+  function styles() {
+    if( current_user_can('moderate_comments') && is_bbpress() ) {
+      ?>
+      <style>
+        .bbp-topic-content, .bbp-reply-content {
+          position: relative;
+        }
+        [data-fv-bbpress-tweaks-loading-indicator] {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          top: 0;
+          left: 0;
+          background: rgba(255,255,255,.8);
+          align-items: center;
+        }
+        [data-fv-bbpress-tweaks-loading-indicator] img {
+          margin: 0 auto;
+          border: 0;
+        }
+      </style>
+      <?php
+    }
+  }
+
+  function add_spinner() {
+    global $post;
+    ?>
+      <div data-fv-bbpress-tweaks-loading-indicator="<?php echo $post->ID; ?>" style="display: none"><img width="16" height="16" src="<?php echo site_url('wp-includes/images/wpspin-2x.gif'); ?>" /></div>
+    <?php
+  }
+
 }
 
 $bbpressmoderation = new bbPressModeration();

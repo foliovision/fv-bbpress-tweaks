@@ -99,6 +99,7 @@ class FV_bbPress {
   
   var $bEnabled = true;
 
+  var $aUserForumCounts = array();
 
   public function __construct() {
     //    delete_option('fv_bbpress_tweaks');//remove this after testing
@@ -231,8 +232,61 @@ The %sitename% Team',
     
     add_filter( 'bbp_current_user_can_access_create_reply_form', array( $this, 'allow_user_to_reply_to_own_moderated_topics' ) );
     add_filter('bbp_subscription_mail_message', array( $this, 'bbp_subscription_mail_message' ),10,3 );
+
+    add_action( 'pre_get_users', array( $this, 'admin_preload_user_forum_counts' ) );
+
+    add_filter( 'manage_users_columns', array( $this, 'admin_user_forum_count_column' ) );
+
+    add_filter( 'manage_users_custom_column', array( $this, 'admin_user_forum_count_column_content' ), 10, 3 );
   }
 
+  // Run a single query to fetch post counts before rendering Users table
+  function admin_preload_user_forum_counts() {
+    global $pagenow;
+    if ( 'users.php' == $pagenow ) { // We only want to run this on Users page
+      global $wpdb;
+
+      if ( ! empty( $this->aUserForumCounts ) ) {
+        return;
+      }
+
+      /**
+       * Note we just do it for all users, not just those who are about to show up in the table.
+       * On our website it takes 130 ms, if we limit the users it's 100 ms, so it's not worth it.
+       * We could also not do the GROUP BY in MySQL, but it does not save much either.
+       */
+      $results = $wpdb->get_results("
+          SELECT post_author, COUNT(*) AS post_count 
+          FROM {$wpdb->posts} 
+          WHERE post_type IN ('topic', 'reply') AND post_status NOT IN ( 'spam', 'trash' )
+          GROUP BY post_author
+      ", OBJECT_K);
+
+      foreach ($results as $result) {
+        $this->aUserForumCounts[ $result->post_author ] = $result->post_count;
+      }
+    }
+  }
+
+  // Add new columns 'Forum Posts'
+  function admin_user_forum_count_column($columns) {
+    $columns['bbpress_count'] = 'Forum Posts';
+    return $columns;
+  }
+
+  // Fetch forums counts from pre-loaded data
+  function admin_user_forum_count_column_content($value, $column_name, $user_id) {
+    if ( 'bbpress_count' == $column_name ) {
+      $count = isset( $this->aUserForumCounts[ $user_id ] ) ? $this->aUserForumCounts[ $user_id ] : '';
+      if ( $count ) {
+        $url = bbp_get_user_profile_url( $user_id );
+        $url = user_trailingslashit( trailingslashit( $url ) . 'topics' );
+        return '<a href="' . esc_attr( $url ) . '" target="_blank">' . intval( $count ) . '</a>';
+      }
+    }
+  
+    return $value;
+  }
 
   function bbp_subscription_mail_message($message, $reply_id, $topic_id){
     $search = "You are receiving this email because you subscribed to a forum topic.";
@@ -689,9 +743,9 @@ The %sitename% Team',
     $iUserID = email_exists( $strMail );
     if( false === $iUserID ) {
       if( isset($data['bbp_akismet_result']) && $data['bbp_akismet_result'] == 'true' ) {
-        file_put_contents(ABSPATH.'fv_add_forum_participant_spam.log',date('r')." ----:\n".var_export($aData,true)."\n".var_export($data,true)."\n",FILE_APPEND);    
+        // file_put_contents(ABSPATH.'fv_add_forum_participant_spam.log',date('r')." ----:\n".var_export($aData,true)."\n".var_export($data,true)."\n",FILE_APPEND);    
       } else {
-        file_put_contents(ABSPATH.'fv_add_forum_participant.log',date('r')." ----:\n".var_export($aData,true)."\n".var_export($data,true)."\n",FILE_APPEND);    
+        // file_put_contents(ABSPATH.'fv_add_forum_participant.log',date('r')." ----:\n".var_export($aData,true)."\n".var_export($data,true)."\n",FILE_APPEND);    
         $iUserID = $this->fv_add_forum_participant( $aData );
       }
 
