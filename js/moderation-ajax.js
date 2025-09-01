@@ -13,7 +13,7 @@ jQuery(function() {
     }
   });
 
-  jQuery(document).on('click', '#bbp_reply_submit', function() {
+  jQuery(document).on('click', '#bbp_reply_submit, #bbp_topic_submit', function() {
     window.removeEventListener('beforeunload', closeWarning);
   });
 
@@ -42,7 +42,7 @@ jQuery(function() {
     if( current_class == 'bbp-reply-edit-link' || current_class == 'bbp-topic-edit-link' ) {
       // check if user is writing a reply
       if( jQuery('#bbp_reply_content').val().length > 0 ) {
-        if( !confirm('You have an unsaved reply, are you sure you want to start edit?') ) {
+        if( !confirm('You have an unsaved reply. Are you sure you want to edit another post?') ) {
           return;
         }
       }
