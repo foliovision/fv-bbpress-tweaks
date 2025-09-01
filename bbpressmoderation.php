@@ -45,7 +45,7 @@ class bbPressModeration {
     
     add_filter( 'bbp_has_topics_query', array( $this, 'query' ) );  //  
     add_filter( 'bbp_has_replies_query', array( $this, 'query' ) );
-    
+
     add_filter( 'bbp_get_topic_title', array( $this, 'title' ), 10, 2 );
     
     add_filter( 'bbp_get_reply_content', array( $this, 'content' ), 10, 2 );
@@ -117,6 +117,9 @@ class bbPressModeration {
     }
     
     add_action( 'init', array( $this, 'cookie_check' ) );
+
+    // Ensure slugs are generated for topics/replies on insert/update if missing
+    add_filter( 'wp_insert_post_data', array( $this, 'pending_post_add_name' ), 10, 2 );
     
     add_filter( 'bbp_current_user_can_access_create_reply_form', array( $this, 'moderated_posts_allow_reply' ) );
     //add_filter( 'post_type_link', array( $this, 'post_type_link' ), 11, 4 );  //  fix for broken reply editing
@@ -322,16 +325,43 @@ class bbPressModeration {
   
   
   function pending_post_add_name( $data, $postarr ) {
-    
-    if( !empty($data['post_title']) ) {
+    // Only ensure slugs for bbPress topics/replies
+    $post_type = isset( $data['post_type'] ) ? $data['post_type'] : '';
+    if ( $post_type !== bbp_get_topic_post_type() && $post_type !== bbp_get_reply_post_type() ) {
+      return $data;
+    }
+
+    // If post_name is already set (non-empty, not false), keep it
+    if ( isset( $data['post_name'] ) && $data['post_name'] && $data['post_name'] !== false ) {
+      return $data;
+    }
+
+    // Derive a title to base the slug on
+    if ( ! empty( $data['post_title'] ) ) {
       $title = $data['post_title'];
     } else {
-      $aTopic = get_post( $data['post_parent'] );
-      $title = get_the_title($aTopic->ID);
+      $parent_id = isset( $data['post_parent'] ) ? (int) $data['post_parent'] : 0;
+      $title     = $parent_id ? get_the_title( $parent_id ) : '';
     }
-    
-    $data['post_name'] = wp_unique_post_slug( sanitize_title($title), false, 'publish', $data['post_type'], $data['post_parent'] );
-    
+
+    // Fallback to generic title if still empty
+    if ( $title === '' ) {
+      $title = __( 'topic', 'bbpress' );
+    }
+
+    // Compute a unique slug for this post
+    $post_id     = isset( $postarr['ID'] ) ? (int) $postarr['ID'] : 0;
+    $post_status = isset( $data['post_status'] ) ? $data['post_status'] : 'publish';
+    $parent_id   = isset( $data['post_parent'] ) ? (int) $data['post_parent'] : 0;
+
+    $data['post_name'] = wp_unique_post_slug(
+      sanitize_title( $title ),
+      $post_id,
+      $post_status,
+      $post_type,
+      $parent_id
+    );
+
     return $data;
   }
   
@@ -372,8 +402,6 @@ class bbPressModeration {
       $data['post_status'] = 'publish';
       return $data;
     }
-    
-    add_filter( 'wp_insert_post_data', array($this,'pending_post_add_name'), 10, 2 );
     
     if ($data['post_author'] == 0) {
       // Anon user - check if need to moderate
